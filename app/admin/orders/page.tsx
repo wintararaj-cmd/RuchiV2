@@ -193,6 +193,29 @@ export default function AdminOrdersPage() {
         }
     };
 
+    const deleteOrder = async (orderId: number) => {
+        if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/orders/${orderId}`, {
+                method: 'DELETE',
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                setOrders(orders.filter(o => o.id !== orderId));
+                alert('Order deleted successfully');
+            } else {
+                alert(`Failed to delete order: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            alert('An error occurred while deleting the order.');
+        }
+    };
+
     const printReceiptFallback = (order: any, settings: any) => {
         const printWindow = window.open('', '_blank', 'width=400,height=600');
         if (!printWindow) {
@@ -530,6 +553,14 @@ export default function AdminOrdersPage() {
                                             style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
                                         >
                                             📄 View Invoice
+                                        </button>
+                                        <button
+                                            onClick={() => deleteOrder(order.id)}
+                                            className="btn"
+                                            style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem', backgroundColor: '#dc3545', color: 'white', border: 'none' }}
+                                            title="Delete Order"
+                                        >
+                                            🗑️ Delete
                                         </button>
                                     </div>
                                 </div>

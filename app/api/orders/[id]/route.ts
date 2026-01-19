@@ -137,9 +137,9 @@ export async function PUT(
             await query(
                 `UPDATE invoices 
                  SET subtotal = COALESCE($1, subtotal),
-                     tax = COALESCE($2, tax),
-                     discount = COALESCE($3, discount),
-                     total = COALESCE($4, total)
+                 tax = COALESCE($2, tax),
+                 discount = COALESCE($3, discount),
+                 total = COALESCE($4, total)
                  WHERE order_id = $5`,
                 [subtotal, tax, discount, total_amount, params.id]
             );
@@ -153,6 +153,41 @@ export async function PUT(
         console.error('Error updating order:', error);
         return NextResponse.json(
             { success: false, error: 'Failed to update order' },
+            { status: 500 }
+        );
+    }
+}
+
+// DELETE order (admin only)
+export async function DELETE(
+    request: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        // First delete related invoice
+        await query('DELETE FROM invoices WHERE order_id = $1', [params.id]);
+
+        // Then delete the order
+        const result = await query(
+            'DELETE FROM orders WHERE id = $1 RETURNING id',
+            [params.id]
+        );
+
+        if (result.rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Order not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Order and related invoice deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting order:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to delete order' },
             { status: 500 }
         );
     }

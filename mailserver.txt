@@ -1,0 +1,13 @@
+http://172.245.210.183:8081/
+admin
+Pandua@50252
+
+Before starting the server, ensure these DNS records exist:
+
+Type  Name              Value
+----  ----              -----
+A     mail.ruchirestaurant.in      <YOUR_VPS_IP>
+MX    ruchirestaurant.in           mail.ruchirestaurant.in (Priority 10)
+TXT   ruchirestaurant.in           "v=spf1 mx ~all"
+TXT   _dmarc.ruchirestaurant.in    "v=DMARC1; p=none; rua=mailto:dmarc@ruchirestaurant.in"
+----------------------------------------------------------------
