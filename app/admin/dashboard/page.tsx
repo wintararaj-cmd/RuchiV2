@@ -145,11 +145,16 @@ export default function AdminDashboard() {
 
                 {/* Accounting Links */}
                 <h2 style={{ marginBottom: '1.5rem' }}>Accounting</h2>
-                <div className="grid grid-3" style={{ marginBottom: '3rem' }}>
+                <div className="grid grid-4" style={{ marginBottom: '3rem' }}>
                     <Link href="/admin/sales" className="glass-card text-center" style={{ textDecoration: 'none', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📊</div>
                         <h3>Sale Book</h3>
                         <p className="text-muted">View all sales transactions</p>
+                    </Link>
+                    <Link href="/admin/product-sales" className="glass-card text-center" style={{ textDecoration: 'none', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📦</div>
+                        <h3>Product Sales</h3>
+                        <p className="text-muted">Product-wise sales report</p>
                     </Link>
                     <Link href="/admin/cashbook" className="glass-card text-center" style={{ textDecoration: 'none', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>💵</div>

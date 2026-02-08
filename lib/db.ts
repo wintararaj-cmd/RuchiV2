@@ -1,5 +1,14 @@
 import { Pool, QueryResult } from 'pg';
 
+// Debug: Log environment variable status
+console.log('🔍 Database Configuration:');
+console.log('  DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('  DB_HOST:', process.env.DB_HOST || 'NOT SET (using default)');
+console.log('  DB_PORT:', process.env.DB_PORT || 'NOT SET (using default)');
+console.log('  DB_NAME:', process.env.DB_NAME || 'NOT SET (using default)');
+console.log('  DB_USER:', process.env.DB_USER || 'NOT SET (using default)');
+console.log('  DB_PASSWORD:', process.env.DB_PASSWORD ? 'SET' : 'NOT SET');
+
 // Create a connection pool
 // Use DATABASE_URL if available (for Coolify/Railway), otherwise use individual env vars
 const pool = process.env.DATABASE_URL
