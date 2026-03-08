@@ -8,21 +8,20 @@ export async function PUT(
 ) {
     try {
         const body = await request.json();
-        const { description, amount, category, date, payment_method, notes, image_id } = body;
+        const { description, amount, category, date, payment_method, notes } = body;
 
         const result = await query(
             `UPDATE expenses 
              SET description = COALESCE($1, description),
                  amount = COALESCE($2, amount),
                  category = COALESCE($3, category),
-                 date = COALESCE($4, date),
+                 expense_date = COALESCE($4, expense_date),
                  payment_method = COALESCE($5, payment_method),
                  notes = COALESCE($6, notes),
-                 receipt_image_id = COALESCE($7, receipt_image_id),
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $8
-             RETURNING *`,
-            [description, amount, category, date, payment_method, notes, image_id, params.id]
+             WHERE id = $7
+             RETURNING id, description, amount, category, expense_date AS date, payment_method, notes, created_at, updated_at`,
+            [description, amount, category, date, payment_method, notes, params.id]
         );
 
         if (result.rows.length === 0) {
@@ -36,10 +35,10 @@ export async function PUT(
             success: true,
             data: result.rows[0],
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating expense:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to update expense' },
+            { success: false, error: 'Failed to update expense', details: error.message },
             { status: 500 }
         );
     }

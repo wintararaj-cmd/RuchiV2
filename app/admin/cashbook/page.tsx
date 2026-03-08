@@ -26,6 +26,8 @@ export default function CashBookPage() {
     const [expenseDescription, setExpenseDescription] = useState('');
     const [expenseAmount, setExpenseAmount] = useState('');
 
+    const [expenseCategory, setExpenseCategory] = useState('Expense');
+
     useEffect(() => {
         const token = localStorage.getItem('adminToken');
         if (!token) {
@@ -121,7 +123,7 @@ export default function CashBookPage() {
                 body: JSON.stringify({
                     description: expenseDescription,
                     amount: parseFloat(expenseAmount),
-                    category: 'Expense',
+                    category: expenseCategory,
                     date: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
                     payment_method: 'cash',
                     notes: '',
@@ -137,6 +139,7 @@ export default function CashBookPage() {
             // Reset form
             setExpenseDescription('');
             setExpenseAmount('');
+            setExpenseCategory('Expense');
             setShowExpenseForm(false);
 
             // Refresh transactions
@@ -241,7 +244,7 @@ export default function CashBookPage() {
                     <h1>💰 Cash Book</h1>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={() => setShowExpenseForm(!showExpenseForm)} className="btn btn-primary">
-                            + Add Expense
+                            + Add Entry
                         </button>
                         <button onClick={exportToCSV} className="btn btn-primary">
                             📥 Export CSV
@@ -255,9 +258,24 @@ export default function CashBookPage() {
                 {/* Expense Form */}
                 {showExpenseForm && (
                     <div className="glass-card" style={{ marginBottom: '2rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Add Cash Expense</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
-                            <div>
+                        <h3 style={{ marginBottom: '1rem' }}>Add Cash Entry (Expense / Purchase)</h3>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'end' }}>
+                            <div style={{ flex: '1 1 150px' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                                    Category
+                                </label>
+                                <select
+                                    value={expenseCategory}
+                                    onChange={(e) => setExpenseCategory(e.target.value)}
+                                    className="input"
+                                >
+                                    <option value="Expense">General Expense</option>
+                                    <option value="Purchase Invoice">Purchase Invoice</option>
+                                    <option value="Salary">Salary</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div style={{ flex: '2 1 200px' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
                                     Description
                                 </label>
@@ -269,7 +287,7 @@ export default function CashBookPage() {
                                     className="input"
                                 />
                             </div>
-                            <div>
+                            <div style={{ flex: '1 1 120px' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
                                     Amount (₹)
                                 </label>
@@ -282,7 +300,7 @@ export default function CashBookPage() {
                                     step="0.01"
                                 />
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
                                 <button onClick={handleAddExpense} className="btn btn-primary">
                                     Add
                                 </button>

@@ -10,33 +10,32 @@ export async function GET(request: Request) {
         const category = searchParams.get('category');
 
         let sql = `
-            SELECT e.*, i.id as image_id 
-            FROM expenses e
-            LEFT JOIN images i ON e.receipt_image_id = i.id
+            SELECT id, description, amount, category, expense_date AS date, payment_method, notes, created_at, updated_at
+            FROM expenses
             WHERE 1=1
         `;
         const params: any[] = [];
         let paramIndex = 1;
 
         if (startDate) {
-            sql += ` AND e.date >= $${paramIndex}`;
+            sql += ` AND expense_date >= $${paramIndex}`;
             params.push(startDate);
             paramIndex++;
         }
 
         if (endDate) {
-            sql += ` AND e.date <= $${paramIndex}`;
+            sql += ` AND expense_date <= $${paramIndex}`;
             params.push(endDate);
             paramIndex++;
         }
 
         if (category && category !== 'All') {
-            sql += ` AND e.category = $${paramIndex}`;
+            sql += ` AND category = $${paramIndex}`;
             params.push(category);
             paramIndex++;
         }
 
-        sql += ' ORDER BY e.date DESC, e.created_at DESC';
+        sql += ' ORDER BY expense_date DESC, created_at DESC';
 
         const result = await query(sql, params);
 
@@ -44,10 +43,10 @@ export async function GET(request: Request) {
             success: true,
             data: result.rows,
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching expenses:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to fetch expenses' },
+            { success: false, error: 'Failed to fetch expenses', details: error.message },
             { status: 500 }
         );
     }
@@ -57,7 +56,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { description, amount, category, date, payment_method, notes, image_id } = body;
+        const { description, amount, category, date, payment_method, notes } = body;
 
         if (!description || amount === undefined || amount === null || !category || !date) {
             return NextResponse.json(
@@ -67,10 +66,10 @@ export async function POST(request: Request) {
         }
 
         const result = await query(
-            `INSERT INTO expenses (description, amount, category, expense_date, payment_method, notes, receipt_image_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             RETURNING *`,
-            [description, amount, category, date, payment_method, notes, image_id || null]
+            `INSERT INTO expenses (description, amount, category, expense_date, payment_method, notes)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, description, amount, category, expense_date AS date, payment_method, notes, created_at, updated_at`,
+            [description, amount, category, date, payment_method, notes]
         );
 
         return NextResponse.json({
