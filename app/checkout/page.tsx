@@ -18,7 +18,7 @@ interface DeliveryLocation {
 
 export default function CheckoutPage() {
     const router = useRouter();
-    const { cart, getCartTotal, clearCart } = useCart();
+    const { cart, getCartTotal, clearCart, isLoaded: cartLoaded } = useCart();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
     const [settings, setSettings] = useState<any>(null);
@@ -209,12 +209,21 @@ export default function CheckoutPage() {
                 alert(errorMessage + ' Please select your location manually.');
             },
             {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+                enableHighAccuracy: false,
+                timeout: 5000,
+                maximumAge: 60000
             }
         );
     };
+
+    if (!cartLoaded || authLoading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '1rem' }}>
+                <span className="spinner"></span>
+                <p>Loading checkout...</p>
+            </div>
+        );
+    }
 
     if (cart.length === 0) {
         router.push('/cart');

@@ -97,7 +97,7 @@ export default function CartPage() {
                                         </p>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                             <span className="badge badge-primary">₹{item.menuItem.price}</span>
-                                            <span className="badge badge-success">{item.menuItem.category}</span>
+                                            <span className="badge badge-success">{item.menuItem.category_name}</span>
                                         </div>
                                     </div>
 
@@ -166,13 +166,20 @@ export default function CartPage() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => router.push('/checkout')}
+                        <Link
+                            href="/checkout"
                             className="btn btn-primary"
-                            style={{ width: '100%', fontSize: '1.125rem', padding: '1rem' }}
+                            style={{ 
+                                width: '100%', 
+                                fontSize: '1.125rem', 
+                                padding: '1rem',
+                                textAlign: 'center',
+                                textDecoration: 'none',
+                                display: 'block'
+                            }}
                         >
                             Proceed to Checkout
-                        </button>
+                        </Link>
 
                         <Link href="/menu" className="btn btn-outline" style={{ width: '100%', marginTop: '1rem' }}>
                             Continue Shopping
