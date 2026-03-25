@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { location_name, delivery_charge, latitude, longitude, radius_km, is_active } = body;
+        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active } = body;
 
         // Validation
         if (!location_name || location_name.trim() === '') {
@@ -77,14 +77,14 @@ export async function POST(request: NextRequest) {
         let paramCount = 3;
 
         if (latitude && longitude) {
-            queryText += `, latitude, longitude, radius_km`;
-            values.push(latitude, longitude, radius_km || 5.0);
-            paramCount += 3;
+            queryText += `, latitude, longitude, radius_km, min_radius_km`;
+            values.push(latitude, longitude, radius_km || 5.0, min_radius_km || 0.0);
+            paramCount += 4;
         }
 
         queryText += `) VALUES ($1, $2, $3`;
         if (latitude && longitude) {
-            queryText += `, $4, $5, $6`;
+            queryText += `, $4, $5, $6, $7`;
         }
         queryText += `) RETURNING *`;
 
@@ -98,10 +98,10 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
         console.error('Error creating delivery location:', error);
 
-        // Handle unique constraint violation
+        // Handle unique constraint violation (though we dropped it, just in case)
         if (error.code === '23505') {
             return NextResponse.json(
-                { success: false, error: 'A location with this name already exists' },
+                { success: false, error: 'A location with this exact name and range already exists' },
                 { status: 409 }
             );
         }

@@ -84,12 +84,13 @@ export async function POST(request: NextRequest) {
                 latitude,
                 longitude,
                 radius_km,
+                min_radius_km,
                 is_active
             FROM delivery_locations
             WHERE is_active = true
                 AND latitude IS NOT NULL
                 AND longitude IS NOT NULL
-            ORDER BY location_name
+            ORDER BY min_radius_km ASC, radius_km ASC
         `);
 
         if (result.rows.length === 0) {
@@ -108,15 +109,22 @@ export async function POST(request: NextRequest) {
                 parseFloat(location.longitude)
             );
 
+            const minRad = parseFloat(location.min_radius_km || '0');
+            const maxRad = parseFloat(location.radius_km || '5.0');
+
             return {
                 ...location,
                 distance: parseFloat(distance.toFixed(2)),
-                withinRange: distance <= parseFloat(location.radius_km)
+                withinRange: distance >= minRad && distance <= maxRad
             };
         });
 
-        // Sort by distance
-        locationsWithDistance.sort((a, b) => a.distance - b.distance);
+        // Sort: first by withinRange (true first), then by distance
+        locationsWithDistance.sort((a, b) => {
+            if (a.withinRange && !b.withinRange) return -1;
+            if (!a.withinRange && b.withinRange) return 1;
+            return a.distance - b.distance;
+        });
 
         // Find locations within range
         const matchingLocations = locationsWithDistance.filter(loc => loc.withinRange);
@@ -127,20 +135,22 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
                 success: false,
-                error: `You are outside all delivery zones. Nearest zone is "${nearest.location_name}" (${nearest.distance}km away)`,
+                error: `You are outside all delivery zones. Nearest zone start is "${nearest.location_name}" (${nearest.distance}km away)`,
                 data: {
                     nearestLocation: {
                         id: nearest.id,
                         location_name: nearest.location_name,
                         delivery_charge: nearest.delivery_charge,
                         distance: nearest.distance,
-                        radius_km: nearest.radius_km
+                        radius_km: nearest.radius_km,
+                        min_radius_km: nearest.min_radius_km
                     },
                     allLocations: locationsWithDistance.map(loc => ({
                         id: loc.id,
                         location_name: loc.location_name,
                         delivery_charge: loc.delivery_charge,
-                        distance: loc.distance
+                        distance: loc.distance,
+                        range: `${loc.min_radius_km}-${loc.radius_km}km`
                     }))
                 }
             }, { status: 200 });
@@ -159,14 +169,16 @@ export async function POST(request: NextRequest) {
                     delivery_charge: bestMatch.delivery_charge,
                     latitude: bestMatch.latitude,
                     longitude: bestMatch.longitude,
-                    radius_km: bestMatch.radius_km
+                    radius_km: bestMatch.radius_km,
+                    min_radius_km: bestMatch.min_radius_km
                 },
                 distance: bestMatch.distance,
                 alternatives: matchingLocations.slice(1, 4).map(loc => ({
                     id: loc.id,
                     location_name: loc.location_name,
                     delivery_charge: loc.delivery_charge,
-                    distance: loc.distance
+                    distance: loc.distance,
+                    range: `${loc.min_radius_km}-${loc.radius_km}km`
                 }))
             }
         });

@@ -10,6 +10,7 @@ interface DeliveryLocation {
     latitude?: number;
     longitude?: number;
     radius_km?: number;
+    min_radius_km?: number;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -28,6 +29,7 @@ export default function DeliveryLocationsPage() {
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
     const [radiusKm, setRadiusKm] = useState('5.0');
+    const [minRadiusKm, setMinRadiusKm] = useState('0.0');
     const [isActive, setIsActive] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [showMapPicker, setShowMapPicker] = useState(false);
@@ -62,6 +64,7 @@ export default function DeliveryLocationsPage() {
         setLatitude('');
         setLongitude('');
         setRadiusKm('5.0');
+        setMinRadiusKm('0.0');
         setIsActive(true);
         setShowModal(true);
     };
@@ -73,6 +76,7 @@ export default function DeliveryLocationsPage() {
         setLatitude(location.latitude?.toString() || '');
         setLongitude(location.longitude?.toString() || '');
         setRadiusKm(location.radius_km?.toString() || '5.0');
+        setMinRadiusKm(location.min_radius_km?.toString() || '0.0');
         setIsActive(location.is_active);
         setShowModal(true);
     };
@@ -108,6 +112,7 @@ export default function DeliveryLocationsPage() {
                 payload.latitude = parseFloat(latitude);
                 payload.longitude = parseFloat(longitude);
                 payload.radius_km = parseFloat(radiusKm) || 5.0;
+                payload.min_radius_km = parseFloat(minRadiusKm) || 0.0;
             }
 
             const response = await fetch(url, {
@@ -220,6 +225,11 @@ export default function DeliveryLocationsPage() {
                                     <tr key={location.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ fontWeight: 500 }}>{location.location_name}</div>
+                                            {location.latitude && (
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    Range: {location.min_radius_km || 0}km - {location.radius_km}km
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                                             <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--primary)' }}>
@@ -383,24 +393,47 @@ export default function DeliveryLocationsPage() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 500 }}>
-                                    Delivery Radius (km)
-                                </label>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0.1"
-                                    value={radiusKm}
-                                    onChange={(e) => setRadiusKm(e.target.value)}
-                                    className="input"
-                                    placeholder="5.0"
-                                    style={{ fontSize: '0.875rem' }}
-                                />
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                                    Customers within this radius will be matched to this zone
-                                </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 500 }}>
+                                        Min Radius (km)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        value={minRadiusKm}
+                                        onChange={(e) => setMinRadiusKm(e.target.value)}
+                                        className="input"
+                                        placeholder="0.0"
+                                        style={{ fontSize: '0.875rem' }}
+                                    />
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                        Starting distance
+                                    </p>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 500 }}>
+                                        Max Radius (km)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0.1"
+                                        value={radiusKm}
+                                        onChange={(e) => setRadiusKm(e.target.value)}
+                                        className="input"
+                                        placeholder="5.0"
+                                        style={{ fontSize: '0.875rem' }}
+                                    />
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                                        Ending distance
+                                    </p>
+                                </div>
                             </div>
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'center' }}>
+                                Customers between {minRadiusKm}km and {radiusKm}km will be matched to this zone
+                            </p>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem' }}>

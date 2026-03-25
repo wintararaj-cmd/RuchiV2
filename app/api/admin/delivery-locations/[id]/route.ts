@@ -42,7 +42,7 @@ export async function PUT(
     try {
         const { id } = params;
         const body = await request.json();
-        const { location_name, delivery_charge, latitude, longitude, radius_km, is_active } = body;
+        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active } = body;
 
         // Validation
         if (location_name !== undefined && location_name.trim() === '') {
@@ -103,6 +103,8 @@ export async function PUT(
             values.push(longitude);
             updates.push(`radius_km = $${paramCount++}`);
             values.push(radius_km || 5.0);
+            updates.push(`min_radius_km = $${paramCount++}`);
+            values.push(min_radius_km || 0.0);
         }
 
         if (is_active !== undefined) {
@@ -144,10 +146,10 @@ export async function PUT(
     } catch (error: any) {
         console.error('Error updating delivery location:', error);
 
-        // Handle unique constraint violation
+        // Handle unique constraint violation (though we dropped it, just in case)
         if (error.code === '23505') {
             return NextResponse.json(
-                { success: false, error: 'A location with this name already exists' },
+                { success: false, error: 'A location with this exact name and range already exists' },
                 { status: 409 }
             );
         }
