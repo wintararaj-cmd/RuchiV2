@@ -1,17 +1,24 @@
 const { Client } = require('pg');
 
-const connectionString = process.env.DATABASE_URL;
-
 async function runFix() {
-    if (!connectionString) {
-        console.error('DATABASE_URL is not set!');
-        return;
+    let clientConfig = {};
+
+    if (process.env.DATABASE_URL) {
+        clientConfig = {
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        };
+    } else {
+        clientConfig = {
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 5432,
+            database: process.env.DB_NAME || 'restaurant_db',
+            user: process.env.DB_USER || 'postgres',
+            password: process.env.DB_PASSWORD || 'Root123',
+        };
     }
 
-    const client = new Client({
-        connectionString,
-        ssl: { rejectUnauthorized: false }
-    });
+    const client = new Client(clientConfig);
 
     try {
         await client.connect();
