@@ -107,13 +107,15 @@ export default function DeliveryLocationsPage() {
                 is_active: isActive,
             };
 
-            // Add GPS coordinates if provided
+            // Add GPS coordinates and range info
             if (latitude && longitude) {
                 payload.latitude = parseFloat(latitude);
                 payload.longitude = parseFloat(longitude);
-                payload.radius_km = parseFloat(radiusKm) || 5.0;
-                payload.min_radius_km = parseFloat(minRadiusKm) || 0.0;
             }
+            
+            // Always include radii if we have some value (default to database defaults if not provided)
+            payload.radius_km = parseFloat(radiusKm) || 5.0;
+            payload.min_radius_km = parseFloat(minRadiusKm) || 0.0;
 
             const response = await fetch(url, {
                 method,
@@ -136,6 +138,18 @@ export default function DeliveryLocationsPage() {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleDuplicate = (location: DeliveryLocation) => {
+        setEditingLocation(null); // Create new
+        setLocationName(`${location.location_name} (Copy)`);
+        setDeliveryCharge(location.delivery_charge.toString());
+        setLatitude(location.latitude?.toString() || '');
+        setLongitude(location.longitude?.toString() || '');
+        setRadiusKm(location.radius_km?.toString() || '5.0');
+        setMinRadiusKm(location.radius_km?.toString() || '2.0'); // Default next tier start to previous tier end
+        setIsActive(true);
+        setShowModal(true);
     };
 
     const handleDelete = async (id: number, name: string) => {
@@ -225,11 +239,13 @@ export default function DeliveryLocationsPage() {
                                     <tr key={location.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                         <td style={{ padding: '1rem' }}>
                                             <div style={{ fontWeight: 500 }}>{location.location_name}</div>
-                                            {location.latitude && (
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                    Range: {location.min_radius_km || 0}km - {location.radius_km}km
-                                                </div>
-                                            )}
+                                            <div style={{ fontSize: '0.75rem', color: location.latitude ? 'var(--text-muted)' : 'var(--danger)', fontWeight: location.latitude ? 400 : 600 }}>
+                                                {location.latitude ? (
+                                                    `Range: ${location.min_radius_km || 0}km - ${location.radius_km}km`
+                                                ) : (
+                                                    '⚠️ Missing GPS Coordinates (Auto-detection disabled)'
+                                                )}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                                             <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--primary)' }}>
@@ -253,6 +269,13 @@ export default function DeliveryLocationsPage() {
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDuplicate(location)}
+                                                    className="btn btn-ghost"
+                                                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                                                >
+                                                    📋 Duplicate
+                                                </button>
                                                 <button
                                                     onClick={() => openEditModal(location)}
                                                     className="btn btn-ghost"
@@ -391,12 +414,10 @@ export default function DeliveryLocationsPage() {
                                         style={{ fontSize: '0.875rem' }}
                                     />
                                 </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 500 }}>
-                                        Min Radius (km)
+                                        Min Radius (km) *
                                     </label>
                                     <input
                                         type="number"
@@ -414,7 +435,7 @@ export default function DeliveryLocationsPage() {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 500 }}>
-                                        Max Radius (km)
+                                        Max Radius (km) *
                                     </label>
                                     <input
                                         type="number"
@@ -431,10 +452,16 @@ export default function DeliveryLocationsPage() {
                                     </p>
                                 </div>
                             </div>
+                            {(!latitude || !longitude) && (
+                                <p style={{ fontSize: '0.7rem', color: 'var(--danger)', marginTop: '0.75rem', fontWeight: 600 }}>
+                                    ⚠️ Warning: Radius range is saved, but auto-detection will NOT work until you pick a location from the map.
+                                </p>
+                            )}
                             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', textAlign: 'center' }}>
                                 Customers between {minRadiusKm}km and {radiusKm}km will be matched to this zone
                             </p>
                         </div>
+               </div>
 
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
