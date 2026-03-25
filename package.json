@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/fix_delivery_table.js && next start",
     "lint": "next lint",
     "migrate": "node scripts/migrate-railway.js",
     "verify-migration": "node scripts/verify-migration.js",
