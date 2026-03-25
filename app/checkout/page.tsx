@@ -12,6 +12,7 @@ interface DeliveryLocation {
     latitude?: number;
     longitude?: number;
     radius_km?: number;
+    min_radius_km?: number;
     is_active: boolean;
 }
 

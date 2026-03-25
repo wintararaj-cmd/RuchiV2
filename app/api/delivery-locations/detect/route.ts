@@ -76,22 +76,48 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch all active delivery locations with GPS coordinates
-        const result = await pool.query(`
+        let query = `
             SELECT 
-                id,
-                location_name,
-                delivery_charge,
-                latitude,
-                longitude,
+                id, 
+                location_name, 
+                delivery_charge, 
+                latitude, 
+                longitude, 
                 radius_km,
-                min_radius_km,
-                is_active
+                0.00 as min_radius_km
             FROM delivery_locations
             WHERE is_active = true
-                AND latitude IS NOT NULL
-                AND longitude IS NOT NULL
+            AND latitude IS NOT NULL 
+            AND longitude IS NOT NULL
             ORDER BY min_radius_km ASC, radius_km ASC
+        `;
+
+        // Check if min_radius_km column exists first to avoid 500 errors
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'delivery_locations' AND column_name = 'min_radius_km'
         `);
+
+        if (columnCheck.rows.length > 0) {
+            query = `
+                SELECT 
+                    id, 
+                    location_name, 
+                    delivery_charge, 
+                    latitude, 
+                    longitude, 
+                    radius_km,
+                    min_radius_km
+                FROM delivery_locations
+                WHERE is_active = true
+                AND latitude IS NOT NULL 
+                AND longitude IS NOT NULL
+                ORDER BY min_radius_km ASC, radius_km ASC
+            `;
+        }
+
+        const result = await pool.query(query);
 
         if (result.rows.length === 0) {
             return NextResponse.json({
