@@ -159,9 +159,10 @@ export async function POST(request: NextRequest) {
             // No exact match, return nearest location as suggestion
             const nearest = locationsWithDistance[0];
 
+            const debugInfo = locationsWithDistance.map(l => `${l.location_name}(${l.distance}km, ${l.min_radius_km}-${l.radius_km}km)`).join(' | ');
             return NextResponse.json({
                 success: false,
-                error: `You are outside all delivery zones. Nearest zone start is "${nearest.location_name}" (${nearest.distance}km away)`,
+                error: `No matching zone for your distance (${nearest.distance}km). Found: ${debugInfo}`,
                 data: {
                     nearestLocation: {
                         id: nearest.id,
