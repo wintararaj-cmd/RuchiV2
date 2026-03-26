@@ -71,8 +71,9 @@ export default function ProductSalesReportPage() {
         const { start, end } = getDateRange();
         const productMap = new Map<number, ProductSale>();
 
-        // Filter orders by date range
+        // Filter orders by date range and status
         const filteredOrders = orders.filter(order => {
+            if (order.order_status === 'cancelled') return false;
             const orderDate = new Date(order.created_at);
             return orderDate >= start && orderDate <= end;
         });
