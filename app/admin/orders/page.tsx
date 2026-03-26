@@ -15,6 +15,7 @@ export default function AdminOrdersPage() {
     const [printingOrderId, setPrintingOrderId] = useState<number | null>(null);
 
     const [deliveryBoys, setDeliveryBoys] = useState<any[]>([]);
+    const [salesmen, setSalesmen] = useState<any[]>([]);
     const [editingDiscount, setEditingDiscount] = useState<{ [key: number]: string }>({});
 
     const [settings, setSettings] = useState<any>(null);
@@ -34,6 +35,7 @@ export default function AdminOrdersPage() {
             return;
         }
         fetchSettings();
+        fetchSalesmen();
         fetchOrders();
         fetchDeliveryBoys();
 
@@ -57,6 +59,18 @@ export default function AdminOrdersPage() {
         }
     };
 
+    const fetchSalesmen = async () => {
+        try {
+            const response = await fetch('/api/admin/salesmen');
+            const data = await response.json();
+            if (data.success) {
+                setSalesmen(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching salesmen:', error);
+        }
+    };
+
     const playNotificationSound = () => {
         if (soundEnabled && audioRef.current) {
             audioRef.current.play().catch(e => console.warn('Sound play blocked:', e));
@@ -72,7 +86,15 @@ export default function AdminOrdersPage() {
                 
                 // If polling, check for new IDs that weren't in our set
                 if (isPolling && prevOrderIdsRef.current.size > 0) {
-                    const hasNewOrder = newOrders.some((order: any) => !prevOrderIdsRef.current.has(order.id));
+                    const hasNewOrder = newOrders.some((order: any) => {
+                        const isNew = !prevOrderIdsRef.current.has(order.id);
+                        if (!isNew) return false;
+
+                        // Skip sound if the order was created by a salesman
+                        const isFromSalesman = salesmen.some(s => s.id === order.user_id);
+                        return !isFromSalesman;
+                    });
+
                     if (hasNewOrder) {
                         playNotificationSound();
                     }
