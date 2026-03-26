@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { ReceiptPrinter } from '@/lib/receipt-printer';
@@ -18,8 +18,16 @@ export default function AdminOrdersPage() {
     const [editingDiscount, setEditingDiscount] = useState<{ [key: number]: string }>({});
 
     const [settings, setSettings] = useState<any>(null);
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    
+    // Track previous order IDs to detect new orders
+    const prevOrderIdsRef = useRef<Set<number>>(new Set());
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
+        // Initialize audio (using a clean bell sound)
+        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        
         const token = localStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin');
@@ -28,6 +36,13 @@ export default function AdminOrdersPage() {
         fetchSettings();
         fetchOrders();
         fetchDeliveryBoys();
+
+        // Set up polling every 30 seconds for new orders
+        const interval = setInterval(() => {
+            fetchOrders(true);
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const fetchSettings = async () => {
@@ -42,17 +57,37 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const fetchOrders = async () => {
+    const playNotificationSound = () => {
+        if (soundEnabled && audioRef.current) {
+            audioRef.current.play().catch(e => console.warn('Sound play blocked:', e));
+        }
+    };
+
+    const fetchOrders = async (isPolling = false) => {
         try {
             const response = await fetch('/api/orders', { cache: 'no-store' });
             const data = await response.json();
             if (data.success) {
-                setOrders(data.data);
+                const newOrders = data.data;
+                
+                // If polling, check for new IDs that weren't in our set
+                if (isPolling && prevOrderIdsRef.current.size > 0) {
+                    const hasNewOrder = newOrders.some((order: any) => !prevOrderIdsRef.current.has(order.id));
+                    if (hasNewOrder) {
+                        playNotificationSound();
+                    }
+                }
+
+                // Update the set of seen IDs
+                const currentIds = new Set(newOrders.map((o: any) => o.id));
+                prevOrderIdsRef.current = currentIds;
+
+                setOrders(newOrders);
             }
         } catch (error) {
             console.error('Error fetching orders:', error);
         } finally {
-            setLoading(false);
+            if (!isPolling) setLoading(false);
         }
     };
 
@@ -425,8 +460,28 @@ export default function AdminOrdersPage() {
     return (
         <main className="container" style={{ padding: '2rem 1.5rem' }}>
             <div className="fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <h1>Order Management</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                        <h1 style={{ marginBottom: '0.5rem' }}>Order Management</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button 
+                                onClick={() => {
+                                    setSoundEnabled(!soundEnabled);
+                                    if (!soundEnabled) {
+                                        // Play sound once to test and gain user permission
+                                        playNotificationSound();
+                                    }
+                                }}
+                                className={`btn ${soundEnabled ? 'btn-primary' : 'btn-ghost'}`}
+                                style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
+                            >
+                                {soundEnabled ? '🔔 Sound On' : '🔕 Sound Off'}
+                            </button>
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                (Auto-checks for new orders)
+                            </span>
+                        </div>
+                    </div>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={() => router.push('/admin/orders/create')} className="btn btn-primary">
                             + Create New Order
