@@ -17,6 +17,7 @@ interface SaleEntry {
     tax: number;
     discount: number;
     total_amount: number;
+    order_status: string;
     created_at: string;
     user_id: number | null; // Added to track source
     table_number: string | null;
@@ -117,29 +118,18 @@ export default function SaleBookPage() {
     };
 
     const getOrderSource = (sale: SaleEntry) => {
-        if (!sale.user_id) return 'Walk-in / Guest'; // Could be web guest or admin created without user link
+        if (!sale.user_id) return 'Walk-in / Guest'; 
 
-        // Check if user_id matches a salesman
         const salesman = salesmen.find(s => s.id === sale.user_id);
         if (salesman) return `Salesman: ${salesman.name}`;
-
-        // If user_id exists but isn't a salesman, it's a registered customer (Web)
-        // Or if existing schema logic implies otherwise. 
-        // Previously: Customer login -> user_id set. Admin/Salesman -> user_id set if they login?
-        // Wait, current logic:
-        // Customer Login (role=customer) -> Creates Order -> user_id = customer.id.
-        // Salesman Dashboard (role=salesman) -> Creates Order -> user_id = salesman.id (We set this in app/salesman/page.tsx).
-        // Admin Dashboard -> Creates Order -> user_id = null (We set this in app/admin/orders/create/page.tsx:84).
-
-        // So:
-        // user_id matches salesman ID -> Salesman
-        // user_id is null -> Admin / Guest (Web without login?) -> Web guest usually not supported, must login.
-        // user_id is other -> Web Customer.
 
         return 'Web Customer';
     };
 
     const filteredSales = sales.filter(sale => {
+        // Exclude cancelled orders
+        if (sale.order_status === 'cancelled') return false;
+
         const saleDate = new Date(sale.created_at);
         const { start, end } = getDateRange();
 
@@ -153,13 +143,10 @@ export default function SaleBookPage() {
 
         if (sourceFilter !== 'all') {
             if (sourceFilter === 'web') {
-                // Web Customer defined as: has user_id AND NOT a salesman
                 matchesSource = !!sale.user_id && !salesmen.find(s => s.id === sale.user_id);
             } else if (sourceFilter === 'admin') {
-                // Admin defined as: user_id is null (created via admin panel)
                 matchesSource = !sale.user_id;
             } else {
-                // Specific salesman ID
                 matchesSource = sale.user_id === parseInt(sourceFilter);
             }
         }
