@@ -27,7 +27,7 @@ export default function AdminOrdersPage() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        // Initialize audio (using a clean bell sound from a different source)
+        // Initialize audio (using a clean bell sound)
         audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-back-2574.mp3');
         audioRef.current.volume = 0.5;
         
@@ -41,10 +41,10 @@ export default function AdminOrdersPage() {
         fetchOrders();
         fetchDeliveryBoys();
 
-        // Set up polling every 30 seconds for new orders
+        // Set up polling every 10 seconds for more responsive notifications
         const interval = setInterval(() => {
             fetchOrders(true);
-        }, 30000);
+        }, 10000);
 
         return () => clearInterval(interval);
     }, []);
@@ -88,7 +88,7 @@ export default function AdminOrdersPage() {
                 
                 // If polling, check for new IDs that weren't in our set
                 if (isPolling && prevOrderIdsRef.current.size > 0) {
-                    const hasNewOrder = newOrders.some((order: any) => {
+                    const freshOrder = newOrders.find((order: any) => {
                         const isNew = !prevOrderIdsRef.current.has(order.id);
                         if (!isNew) return false;
 
@@ -97,8 +97,9 @@ export default function AdminOrdersPage() {
                         return !isFromSalesman;
                     });
 
-                    if (hasNewOrder) {
+                    if (freshOrder) {
                         playNotificationSound();
+                        alert(`🔔 New Order Received: #${freshOrder.order_number || freshOrder.id} from ${freshOrder.customer_name}`);
                     }
                 }
 
