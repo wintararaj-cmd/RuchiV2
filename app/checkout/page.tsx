@@ -14,6 +14,7 @@ interface DeliveryLocation {
     radius_km?: number;
     min_radius_km?: number;
     is_active: boolean;
+    min_order_value?: number;
 }
 
 export default function CheckoutPage() {
@@ -89,6 +90,13 @@ export default function CheckoutPage() {
 
         if (!selectedLocationId) {
             alert('Please select a delivery location');
+            return;
+        }
+
+        const location = deliveryLocations.find(loc => loc.id === selectedLocationId);
+        if (location && location.min_order_value && subtotal < parseFloat(location.min_order_value.toString())) {
+            alert(`Minimum order value for ${location.location_name} is ₹${parseFloat(location.min_order_value.toString()).toFixed(2)}. Your current subtotal is ₹${subtotal.toFixed(2)}.`);
+            setLoading(false);
             return;
         }
 
@@ -351,6 +359,7 @@ export default function CheckoutPage() {
                                         {deliveryLocations.map(loc => (
                                             <option key={loc.id} value={loc.id}>
                                                 {loc.location_name} - ₹{parseFloat(loc.delivery_charge.toString()).toFixed(2)}
+                                                {loc.min_order_value && parseFloat(loc.min_order_value.toString()) > 0 ? ` (Min: ₹${parseFloat(loc.min_order_value.toString()).toFixed(2)})` : ''}
                                             </option>
                                         ))}
                                     </select>

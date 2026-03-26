@@ -12,6 +12,7 @@ interface DeliveryLocation {
     radius_km?: number;
     min_radius_km?: number;
     is_active: boolean;
+    min_order_value?: number;
     created_at: string;
     updated_at: string;
 }
@@ -30,6 +31,7 @@ export default function DeliveryLocationsPage() {
     const [longitude, setLongitude] = useState('');
     const [radiusKm, setRadiusKm] = useState('5.0');
     const [minRadiusKm, setMinRadiusKm] = useState('0.0');
+    const [minOrderValue, setMinOrderValue] = useState('0.00');
     const [isActive, setIsActive] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [showMapPicker, setShowMapPicker] = useState(false);
@@ -65,6 +67,7 @@ export default function DeliveryLocationsPage() {
         setLongitude('');
         setRadiusKm('5.0');
         setMinRadiusKm('0.0');
+        setMinOrderValue('0.00');
         setIsActive(true);
         setShowModal(true);
     };
@@ -77,6 +80,7 @@ export default function DeliveryLocationsPage() {
         setLongitude(location.longitude?.toString() || '');
         setRadiusKm(location.radius_km?.toString() || '5.0');
         setMinRadiusKm(location.min_radius_km?.toString() || '0.0');
+        setMinOrderValue(location.min_order_value?.toString() || '0.00');
         setIsActive(location.is_active);
         setShowModal(true);
     };
@@ -116,6 +120,7 @@ export default function DeliveryLocationsPage() {
             // Always include radii if we have some value (default to database defaults if not provided)
             payload.radius_km = parseFloat(radiusKm) || 5.0;
             payload.min_radius_km = parseFloat(minRadiusKm) || 0.0;
+            payload.min_order_value = parseFloat(minOrderValue) || 0.0;
 
             const response = await fetch(url, {
                 method,
@@ -148,6 +153,7 @@ export default function DeliveryLocationsPage() {
         setLongitude(location.longitude?.toString() || '');
         setRadiusKm(location.radius_km?.toString() || '5.0');
         setMinRadiusKm(location.radius_km?.toString() || '2.0'); // Default next tier start to previous tier end
+        setMinOrderValue(location.min_order_value?.toString() || '0.00');
         setIsActive(true);
         setShowModal(true);
     };
@@ -246,6 +252,11 @@ export default function DeliveryLocationsPage() {
                                                     '⚠️ Missing GPS Coordinates (Auto-detection disabled)'
                                                 )}
                                             </div>
+                                            {location.min_order_value > 0 && (
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 600, marginTop: '0.25rem' }}>
+                                                    🛒 Min Order: ₹{parseFloat(location.min_order_value.toString()).toFixed(2)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                                             <span style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--primary)' }}>
@@ -357,6 +368,21 @@ export default function DeliveryLocationsPage() {
                                 onChange={(e) => setDeliveryCharge(e.target.value)}
                                 className="input"
                                 placeholder="0.00"
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                                Minimum Order Value (₹)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={minOrderValue}
+                                onChange={(e) => setMinOrderValue(e.target.value)}
+                                className="input"
+                                placeholder="0.00 (Set to 0 if no minimum)"
                             />
                         </div>
 

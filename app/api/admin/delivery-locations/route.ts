@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active } = body;
+        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active, min_order_value } = body;
 
         // Validation
         if (!location_name || location_name.trim() === '') {
@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Build query dynamically based on provided fields
-        let queryText = `INSERT INTO delivery_locations (location_name, delivery_charge, is_active`;
-        let values: any[] = [location_name.trim(), delivery_charge, is_active !== false];
-        let paramCount = 3;
+        let queryText = `INSERT INTO delivery_locations (location_name, delivery_charge, is_active, min_order_value`;
+        let values: any[] = [location_name.trim(), delivery_charge, is_active !== false, min_order_value || 0];
+        let paramCount = 4;
 
         if (latitude && longitude) {
             queryText += `, latitude, longitude, radius_km, min_radius_km`;
@@ -82,9 +82,9 @@ export async function POST(request: NextRequest) {
             paramCount += 4;
         }
 
-        queryText += `) VALUES ($1, $2, $3`;
+        queryText += `) VALUES ($1, $2, $3, $4`;
         if (latitude && longitude) {
-            queryText += `, $4, $5, $6, $7`;
+            queryText += `, $5, $6, $7, $8`;
         }
         queryText += `) RETURNING *`;
 

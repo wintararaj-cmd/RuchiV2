@@ -42,7 +42,7 @@ export async function PUT(
     try {
         const { id } = params;
         const body = await request.json();
-        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active } = body;
+        const { location_name, delivery_charge, latitude, longitude, radius_km, min_radius_km, is_active, min_order_value } = body;
 
         // Validation
         if (location_name !== undefined && location_name.trim() === '') {
@@ -94,6 +94,11 @@ export async function PUT(
         if (delivery_charge !== undefined) {
             updates.push(`delivery_charge = $${paramCount++}`);
             values.push(delivery_charge);
+        }
+
+        if (min_order_value !== undefined) {
+            updates.push(`min_order_value = $${paramCount++}`);
+            values.push(min_order_value);
         }
 
         if (latitude !== undefined && longitude !== undefined) {
