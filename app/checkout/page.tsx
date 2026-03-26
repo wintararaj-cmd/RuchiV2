@@ -403,9 +403,6 @@ export default function CheckoutPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                                 {[
                                     { value: 'cash', label: 'Cash on Delivery', icon: '💵' },
-                                    { value: 'card', label: 'Card', icon: '💳' },
-                                    { value: 'upi', label: 'UPI', icon: '📱' },
-                                    { value: 'wallet', label: 'Wallet', icon: '👛' },
                                 ].map((method) => (
                                     <button
                                         key={method.value}
