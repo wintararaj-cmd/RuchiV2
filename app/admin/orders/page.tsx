@@ -20,14 +20,16 @@ export default function AdminOrdersPage() {
 
     const [settings, setSettings] = useState<any>(null);
     const [soundEnabled, setSoundEnabled] = useState(true);
+    const [audioUnlocked, setAudioUnlocked] = useState(false);
     
     // Track previous order IDs to detect new orders
     const prevOrderIdsRef = useRef<Set<number>>(new Set());
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        // Initialize audio (using a clean bell sound)
-        audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        // Initialize audio (using a clean bell sound from a different source)
+        audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-back-2574.mp3');
+        audioRef.current.volume = 0.5;
         
         const token = localStorage.getItem('adminToken');
         if (!token) {
@@ -489,12 +491,18 @@ export default function AdminOrdersPage() {
                             <button 
                                 onClick={() => {
                                     setSoundEnabled(!soundEnabled);
-                                    if (!soundEnabled) {
-                                        // Play sound once to test and gain user permission
+                                    // Unlock audio on first interaction
+                                    if (!audioUnlocked && !soundEnabled && audioRef.current) {
+                                        audioRef.current.play().then(() => {
+                                            audioRef.current?.pause();
+                                            if (audioRef.current) audioRef.current.currentTime = 0;
+                                            setAudioUnlocked(true);
+                                        }).catch(console.error);
+                                    } else if (!soundEnabled) {
                                         playNotificationSound();
                                     }
                                 }}
-                                className={`btn ${soundEnabled ? 'btn-primary' : 'btn-ghost'}`}
+                                className={`btn ${soundEnabled ? 'btn-primary' : 'btn-danger'}`}
                                 style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
                             >
                                 {soundEnabled ? '🔔 Sound On' : '🔕 Sound Off'}
@@ -681,6 +689,7 @@ export default function AdminOrdersPage() {
                                         <div style={{ marginTop: '0.5rem' }}>
                                             <span className="badge" style={{ background: 'var(--info)', color: 'white' }}>
                                                 📍 {order.delivery_location_name}
+                                                {order.distance && ` (${parseFloat(order.distance).toFixed(1)} km)`}
                                             </span>
                                             {order.delivery_charge > 0 && (
                                                 <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>

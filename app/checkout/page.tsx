@@ -26,6 +26,7 @@ export default function CheckoutPage() {
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
     const [detectingLocation, setDetectingLocation] = useState(false);
     const [detectedLocationInfo, setDetectedLocationInfo] = useState<string>('');
+    const [customerCoords, setCustomerCoords] = useState<{lat: number, lng: number, distance: number} | null>(null);
 
     useEffect(() => {
         // Fetch settings and delivery locations in parallel
@@ -117,6 +118,9 @@ export default function CheckoutPage() {
                 total_amount: total,
                 payment_method: formData.paymentMethod,
                 notes: formData.notes,
+                customer_lat: customerCoords?.lat,
+                customer_lng: customerCoords?.lng,
+                distance: customerCoords?.distance,
             };
 
             const response = await fetch('/api/orders', {
@@ -169,6 +173,11 @@ export default function CheckoutPage() {
                         setDetectedLocationInfo(
                             `✓ Detected: ${data.data.location.location_name} (${data.data.distance.toFixed(1)}km away)`
                         );
+                        setCustomerCoords({
+                            lat: latitude,
+                            lng: longitude,
+                            distance: data.data.distance
+                        });
                     } else if (!isSilent) {
                         // Show nearest location as suggestion only if not silent
                         setDetectedLocationInfo(

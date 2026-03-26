@@ -69,6 +69,10 @@ export async function POST(request: Request) {
             total_amount,
             payment_method,
 
+            customer_lat,
+            customer_lng,
+            distance,
+
             notes,
             table_number,
             order_status,
@@ -99,9 +103,8 @@ export async function POST(request: Request) {
             }
         }
 
-        // START TRANSACTION
-        await client.query('BEGIN');
-
+        // START TRANSACTION (Already handled below)
+        
         // Generate daily sequential order number
         const today = new Date();
         const datePrefix = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
@@ -118,8 +121,8 @@ export async function POST(request: Request) {
         const orderNumber = `${datePrefix}-${String(orderCount).padStart(3, '0')}`; // Format: YYYYMMDD-XXX
 
         const orderResult = await client.query(
-            `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status, customer_lat, customer_lng, distance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        RETURNING *`,
             [
                 orderNumber,
@@ -140,6 +143,9 @@ export async function POST(request: Request) {
                 table_number || null,
                 order_status || 'pending',
                 payment_status || 'pending',
+                customer_lat || null,
+                customer_lng || null,
+                distance || null,
             ]
         );
 
