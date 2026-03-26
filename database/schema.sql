@@ -104,6 +104,9 @@ CREATE TABLE IF NOT EXISTS orders (
     order_status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'
     notes TEXT,
     cancelled_reason TEXT,
+    customer_lat NUMERIC, -- Geolocation latitude
+    customer_lng NUMERIC, -- Geolocation longitude
+    distance NUMERIC, -- Distance in kilometers from shop
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     delivered_at TIMESTAMP

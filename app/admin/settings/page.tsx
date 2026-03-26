@@ -275,7 +275,8 @@ export default function SettingsPage() {
                                         const res = await fetch('/api/admin/run-migration', { method: 'POST' });
                                         const data = await res.json();
                                         if (data.success) {
-                                            alert('Database updated successfully!');
+                                            const summary = data.results.map((r: any) => `${r.id}: ${r.success ? '✅' : '❌'}`).join('\n');
+                                            alert('Migration process finished:\n' + summary);
                                         } else {
                                             alert('Update failed: ' + (data.error || 'Unknown error'));
                                         }

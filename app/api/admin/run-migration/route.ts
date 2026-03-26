@@ -3,63 +3,28 @@ import { query } from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
-        // Run the migration to add missing columns
-        const migrationSQL = `
-            DO $$
-            BEGIN
-                BEGIN
-                    ALTER TABLE expenses ADD COLUMN expense_date DATE NOT NULL DEFAULT CURRENT_DATE;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
+        const sqlCalls = [
+            { id: 'lat', sql: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_lat NUMERIC;` },
+            { id: 'lng', sql: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_lng NUMERIC;` },
+            { id: 'dist', sql: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS distance NUMERIC;` },
+            { id: 'exp_notes', sql: `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS notes TEXT;` },
+            { id: 'exp_date', sql: `ALTER TABLE expenses ADD COLUMN IF NOT EXISTS expense_date DATE NOT NULL DEFAULT CURRENT_DATE;` }
+        ];
 
-                BEGIN
-                    ALTER TABLE expenses ADD COLUMN receipt_image_id INTEGER REFERENCES images(id) ON DELETE SET NULL;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE expenses ADD COLUMN notes TEXT;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                -- Orders Table Migrations
-                BEGIN
-                    ALTER TABLE orders ADD COLUMN customer_lat NUMERIC;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE orders ADD COLUMN customer_lng NUMERIC;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-
-                BEGIN
-                    ALTER TABLE orders ADD COLUMN distance NUMERIC;
-                EXCEPTION
-                    WHEN duplicate_column THEN NULL;
-                END;
-            END $$;
-        `;
-
-        await query(migrationSQL);
-
-        // Verify the columns exist
-        const result = await query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'expenses'
-            ORDER BY column_name;
-        `);
+        const results = [];
+        for (const call of sqlCalls) {
+            try {
+                await query(call.sql);
+                results.push({ id: call.id, success: true });
+            } catch (err: any) {
+                results.push({ id: call.id, success: false, error: err.message });
+            }
+        }
 
         return NextResponse.json({
             success: true,
-            message: 'Migration completed successfully',
-            columns: result.rows.map(r => r.column_name)
+            message: 'Migration process finished',
+            results: results
         });
     } catch (error: any) {
         console.error('Migration error:', error);
