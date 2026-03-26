@@ -564,7 +564,12 @@ export default function AdminOrdersPage() {
                 {/* Orders */}
                 <div style={{ display: 'grid', gap: '1.5rem' }}>
                     {filteredOrders.map((order) => (
-                        <div key={order.id} className="glass-card">
+                        <div key={order.id} className="glass-card" style={{ position: 'relative', overflow: 'hidden' }}>
+                            {order.order_status === 'cancelled' && (
+                                <div className="cancelled-stamp-container">
+                                    <div className="cancelled-stamp">Cancelled</div>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                                 <div>
                                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
