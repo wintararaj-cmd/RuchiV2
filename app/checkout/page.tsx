@@ -28,21 +28,16 @@ export default function CheckoutPage() {
     const [detectedLocationInfo, setDetectedLocationInfo] = useState<string>('');
 
     useEffect(() => {
-        // Fetch settings
-        fetch('/api/settings')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) setSettings(data.data);
+        // Fetch settings and delivery locations in parallel
+        Promise.all([
+            fetch('/api/settings').then(res => res.json()),
+            fetch('/api/admin/delivery-locations?active=true').then(res => res.json())
+        ])
+            .then(([settingsData, locationsData]) => {
+                if (settingsData.success) setSettings(settingsData.data);
+                if (locationsData.success) setDeliveryLocations(locationsData.data);
             })
-            .catch(err => console.error('Error fetching settings:', err));
-
-        // Fetch delivery locations
-        fetch('/api/admin/delivery-locations?active=true')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) setDeliveryLocations(data.data);
-            })
-            .catch(err => console.error('Error fetching delivery locations:', err));
+            .catch(err => console.error('Error fetching checkout data:', err));
     }, []);
 
     const [formData, setFormData] = useState({
@@ -105,7 +100,15 @@ export default function CheckoutPage() {
                 customer_phone: formData.phone,
                 customer_address: formData.address,
                 order_type: 'delivery',
-                items: cart,
+                items: cart.map(item => ({
+                    menuItem: {
+                        id: item.menuItem.id,
+                        name: item.menuItem.name,
+                        price: item.menuItem.price,
+                        gst_rate: item.menuItem.gst_rate
+                    },
+                    quantity: item.quantity
+                })),
                 subtotal,
                 tax,
                 discount: 0,

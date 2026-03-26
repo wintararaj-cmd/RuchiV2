@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, getClient } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +51,7 @@ export async function GET(request: Request) {
 
 // POST create new order
 export async function POST(request: Request) {
+    const client = await getClient();
     try {
         const body = await request.json();
         const {
@@ -98,21 +99,25 @@ export async function POST(request: Request) {
             }
         }
 
+        // START TRANSACTION
+        await client.query('BEGIN');
+
         // Generate daily sequential order number
         const today = new Date();
         const datePrefix = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
 
-        // Get count of orders created today for sequential numbering
-        const orderCountResult = await query(
+        // Optimized count query using date range instead of DATE() function for better index usage
+        const orderCountResult = await client.query(
             `SELECT COUNT(*) as count FROM orders 
-             WHERE order_number LIKE $1 
-             AND DATE(created_at) = CURRENT_DATE`,
+             WHERE created_at >= CURRENT_DATE 
+             AND created_at < (CURRENT_DATE + INTERVAL '1 day')
+             AND order_number LIKE $1`,
             [`${datePrefix}-%`]
         );
         const orderCount = parseInt(orderCountResult.rows[0].count) + 1;
         const orderNumber = `${datePrefix}-${String(orderCount).padStart(3, '0')}`; // Format: YYYYMMDD-XXX
 
-        const result = await query(
+        const orderResult = await client.query(
             `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        RETURNING *`,
@@ -139,38 +144,47 @@ export async function POST(request: Request) {
         );
 
         // Auto-generate invoice
-        const order = result.rows[0];
+        const order = orderResult.rows[0];
         const invoiceDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
 
-        // Get count of invoices created today for sequential numbering
-        const invoiceCountResult = await query(
-            `SELECT COUNT(*) as count FROM invoices WHERE invoice_number LIKE $1`,
+        // Optimized invoice count query
+        const invoiceCountResult = await client.query(
+            `SELECT COUNT(*) as count FROM invoices 
+             WHERE generated_at >= CURRENT_DATE 
+             AND generated_at < (CURRENT_DATE + INTERVAL '1 day')
+             AND invoice_number LIKE $1`,
             [`INV-${invoiceDate}-%`]
         );
         const invoiceCount = parseInt(invoiceCountResult.rows[0].count) + 1;
         const invoiceNumber = `INV-${invoiceDate}-${String(invoiceCount).padStart(4, '0')}`;
 
-        await query(
+        await client.query(
             `INSERT INTO invoices (order_id, invoice_number, subtotal, tax, discount, total)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [order.id, invoiceNumber, subtotal, tax || 0, discount || 0, total_amount]
         );
+
+        // COMMIT TRANSACTION
+        await client.query('COMMIT');
 
         return NextResponse.json({
             success: true,
             data: { ...order, invoice_number: invoiceNumber },
         });
     } catch (error: any) {
+        // ROLLBACK TRANSACTION on error
+        await client.query('ROLLBACK');
         console.error('❌ Error creating order:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
         return NextResponse.json(
             {
                 success: false,
                 error: 'Failed to create order',
-                details: error.message // Include error details in development
+                details: error.message
             },
             { status: 500 }
         );
+    } finally {
+        // Release client back to pool
+        client.release();
     }
 }
