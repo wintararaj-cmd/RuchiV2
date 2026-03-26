@@ -141,9 +141,9 @@ export default function CheckoutPage() {
         }
     };
 
-    const detectMyLocation = async () => {
+    const detectMyLocation = async (isSilent: boolean = false) => {
         if (!navigator.geolocation) {
-            alert('GPS is not supported by your browser. Please select your location manually.');
+            if (!isSilent) alert('GPS is not supported by your browser. Please select your location manually.');
             return;
         }
 
@@ -169,13 +169,12 @@ export default function CheckoutPage() {
                         setDetectedLocationInfo(
                             `✓ Detected: ${data.data.location.location_name} (${data.data.distance.toFixed(1)}km away)`
                         );
-                    } else {
-                        // Show nearest location as suggestion
+                    } else if (!isSilent) {
+                        // Show nearest location as suggestion only if not silent
                         setDetectedLocationInfo(
                             `⚠️ ${data.error}. Please select manually.`
                         );
                         if (data.data?.nearestLocation) {
-                            // Optionally auto-select nearest location
                             const confirmUseNearest = confirm(
                                 `You're outside delivery zones. Use nearest zone "${data.data.nearestLocation.location_name}" (${data.data.nearestLocation.distance.toFixed(1)}km away)?`
                             );
@@ -183,33 +182,38 @@ export default function CheckoutPage() {
                                 setSelectedLocationId(data.data.nearestLocation.id);
                             }
                         }
+                    } else if (data.data?.nearestLocation) {
+                        // If silent (auto-load), we can just set the recommendation info without alert
+                        setDetectedLocationInfo(
+                            `📍 You seem to be near ${data.data.nearestLocation.location_name} (${data.data.nearestLocation.distance.toFixed(1)}km).`
+                        );
                     }
                 } catch (error) {
                     console.error('Error detecting location:', error);
-                    alert('Failed to detect location. Please select manually.');
+                    if (!isSilent) alert('Failed to detect location. Please select manually.');
                 } finally {
                     setDetectingLocation(false);
                 }
             },
             (error) => {
                 setDetectingLocation(false);
-                let errorMessage = 'Could not get your location. ';
-
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage += 'Please allow location access and try again.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage += 'Location information is unavailable.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage += 'Location request timed out.';
-                        break;
-                    default:
-                        errorMessage += 'An unknown error occurred.';
+                if (!isSilent) {
+                    let errorMessage = 'Could not get your location. ';
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Please allow location access and try again.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information is unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMessage += 'An unknown error occurred.';
+                    }
+                    alert(errorMessage + ' Please select your location manually.');
                 }
-
-                alert(errorMessage + ' Please select your location manually.');
             },
             {
                 enableHighAccuracy: false,
@@ -218,6 +222,17 @@ export default function CheckoutPage() {
             }
         );
     };
+
+    // Auto-detect location on page load
+    useEffect(() => {
+        if (cartLoaded && !authLoading && cart.length > 0 && !selectedLocationId) {
+            // Wait a moment for everything to settle
+            const timer = setTimeout(() => {
+                detectMyLocation(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [cartLoaded, authLoading, cart.length]);
 
     if (!cartLoaded || authLoading) {
         return (
@@ -280,7 +295,7 @@ export default function CheckoutPage() {
                                         </label>
                                         <button
                                             type="button"
-                                            onClick={detectMyLocation}
+                                            onClick={() => detectMyLocation(false)}
                                             disabled={detectingLocation}
                                             className="btn btn-ghost"
                                             style={{
@@ -297,7 +312,7 @@ export default function CheckoutPage() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    📍 Detect My Location
+                                                    📍 {selectedLocationId ? 'Refresh Location' : 'Detect My Location'}
                                                 </>
                                             )}
                                         </button>
@@ -307,11 +322,11 @@ export default function CheckoutPage() {
                                         <div style={{
                                             marginBottom: '0.75rem',
                                             padding: '0.75rem',
-                                            background: detectedLocationInfo.startsWith('✓') ? 'rgba(34, 197, 94, 0.1)' : 'rgba(251, 146, 60, 0.1)',
-                                            border: `1px solid ${detectedLocationInfo.startsWith('✓') ? 'rgba(34, 197, 94, 0.3)' : 'rgba(251, 146, 60, 0.3)'}`,
+                                            background: detectedLocationInfo.includes('✓') ? 'rgba(34, 197, 94, 0.1)' : 'rgba(251, 146, 60, 0.1)',
+                                            border: `1px solid ${detectedLocationInfo.includes('✓') ? 'rgba(34, 197, 94, 0.3)' : 'rgba(251, 146, 60, 0.3)'}`,
                                             borderRadius: '8px',
                                             fontSize: '0.875rem',
-                                            color: detectedLocationInfo.startsWith('✓') ? 'var(--success)' : 'var(--warning)'
+                                            color: detectedLocationInfo.includes('✓') ? 'var(--success)' : 'var(--warning)'
                                         }}>
                                             {detectedLocationInfo}
                                         </div>
@@ -337,7 +352,7 @@ export default function CheckoutPage() {
                                     )}
 
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        💡 Tip: Click "Detect My Location" to automatically find your delivery zone
+                                        💡 Tip: We detect your location automatically. Use the button to refresh if needed.
                                     </div>
                                 </div>
 
