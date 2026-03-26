@@ -103,7 +103,8 @@ export async function POST(request: Request) {
             }
         }
 
-        // START TRANSACTION (Already handled below)
+        // START TRANSACTION
+        await client.query('BEGIN');
         
         // Generate daily sequential order number
         const today = new Date();
@@ -120,34 +121,70 @@ export async function POST(request: Request) {
         const orderCount = parseInt(orderCountResult.rows[0].count) + 1;
         const orderNumber = `${datePrefix}-${String(orderCount).padStart(3, '0')}`; // Format: YYYYMMDD-XXX
 
-        const orderResult = await client.query(
-            `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status, customer_lat, customer_lng, distance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-       RETURNING *`,
-            [
-                orderNumber,
-                user_id || null,
-                customer_name || 'Walk-in Customer',
-                customer_phone || 'N/A',
-                customer_address || null,
-                order_type || 'delivery',
-                JSON.stringify(items),
-                subtotal,
-                tax || 0,
-                discount || 0,
-                delivery_location_id || null,
-                delivery_charge || 0,
-                total_amount,
-                payment_method,
-                notes || null,
-                table_number || null,
-                order_status || 'pending',
-                payment_status || 'pending',
-                customer_lat || null,
-                customer_lng || null,
-                distance || null,
-            ]
-        );
+        let orderResult;
+        try {
+            // Attempt to insert with geolocation and distance columns
+            orderResult = await client.query(
+                `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status, customer_lat, customer_lng, distance)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+           RETURNING *`,
+                [
+                    orderNumber,
+                    user_id || null,
+                    customer_name || 'Walk-in Customer',
+                    customer_phone || 'N/A',
+                    customer_address || null,
+                    order_type || 'delivery',
+                    JSON.stringify(items),
+                    subtotal,
+                    tax || 0,
+                    discount || 0,
+                    delivery_location_id || null,
+                    delivery_charge || 0,
+                    total_amount,
+                    payment_method,
+                    notes || null,
+                    table_number || null,
+                    order_status || 'pending',
+                    payment_status || 'pending',
+                    customer_lat || null,
+                    customer_lng || null,
+                    distance || null,
+                ]
+            );
+        } catch (err: any) {
+            // If columns don't exist (ERROR 42703), fallback to legacy insert
+            if (err.code === '42703') {
+                console.warn('⚠️ Orders table missing newer columns. Falling back to basic insert.');
+                orderResult = await client.query(
+                    `INSERT INTO orders (order_number, user_id, customer_name, customer_phone, customer_address, order_type, items, subtotal, tax, discount, delivery_location_id, delivery_charge, total_amount, payment_method, notes, table_number, order_status, payment_status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+               RETURNING *`,
+                    [
+                        orderNumber,
+                        user_id || null,
+                        customer_name || 'Walk-in Customer',
+                        customer_phone || 'N/A',
+                        customer_address || null,
+                        order_type || 'delivery',
+                        JSON.stringify(items),
+                        subtotal,
+                        tax || 0,
+                        discount || 0,
+                        delivery_location_id || null,
+                        delivery_charge || 0,
+                        total_amount,
+                        payment_method,
+                        notes || null,
+                        table_number || null,
+                        order_status || 'pending',
+                        payment_status || 'pending',
+                    ]
+                );
+            } else {
+                throw err;
+            }
+        }
 
         // Auto-generate invoice
         const order = orderResult.rows[0];
