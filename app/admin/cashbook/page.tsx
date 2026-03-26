@@ -57,7 +57,7 @@ export default function CashBookPage() {
             if (ordersData.success) {
                 // Filter cash transactions
                 const cashSales = ordersData.data
-                    .filter((order: any) => order.payment_method === 'cash')
+                    .filter((order: any) => order.payment_method === 'cash' && order.order_status !== 'cancelled')
                     .map((order: any) => ({
                         id: `sale-${order.id}`,
                         date: order.created_at,
