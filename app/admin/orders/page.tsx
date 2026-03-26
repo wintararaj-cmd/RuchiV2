@@ -24,13 +24,60 @@ export default function AdminOrdersPage() {
     
     // Track previous order IDs to detect new orders
     const prevOrderIdsRef = useRef<Set<number>>(new Set());
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+
+    // Generate a notification beep using Web Audio API (no external URL needed)
+    const playNotificationSound = () => {
+        if (!soundEnabled) return;
+        try {
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            const ctx = audioCtxRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+
+            // Play 3 short beeps for urgency
+            const beepTimes = [0, 0.25, 0.5];
+            beepTimes.forEach((startDelay) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 880; // A5 note
+                gain.gain.setValueAtTime(0.4, ctx.currentTime + startDelay);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startDelay + 0.15);
+                osc.start(ctx.currentTime + startDelay);
+                osc.stop(ctx.currentTime + startDelay + 0.15);
+            });
+        } catch (e) {
+            console.warn('Web Audio beep failed:', e);
+        }
+    };
+
+    // Auto-unlock audio on first user interaction anywhere on the page
+    useEffect(() => {
+        const unlockAudio = () => {
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            if (audioCtxRef.current.state === 'suspended') {
+                audioCtxRef.current.resume();
+            }
+            setAudioUnlocked(true);
+            // Remove listeners after first interaction
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+    }, []);
 
     useEffect(() => {
-        // Initialize audio (using a clean bell sound)
-        audioRef.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-back-2574.mp3');
-        audioRef.current.volume = 0.5;
-        
         const token = localStorage.getItem('adminToken');
         if (!token) {
             router.push('/admin');
@@ -73,12 +120,6 @@ export default function AdminOrdersPage() {
         }
     };
 
-    const playNotificationSound = () => {
-        if (soundEnabled && audioRef.current) {
-            audioRef.current.play().catch(e => console.warn('Sound play blocked:', e));
-        }
-    };
-
     const fetchOrders = async (isPolling = false) => {
         try {
             const response = await fetch('/api/orders', { cache: 'no-store' });
@@ -104,7 +145,7 @@ export default function AdminOrdersPage() {
                 }
 
                 // Update the set of seen IDs
-                const currentIds = new Set(newOrders.map((o: any) => o.id));
+                const currentIds = new Set<number>(newOrders.map((o: any) => o.id));
                 prevOrderIdsRef.current = currentIds;
 
                 setOrders(newOrders);
@@ -491,15 +532,10 @@ export default function AdminOrdersPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <button 
                                 onClick={() => {
-                                    setSoundEnabled(!soundEnabled);
-                                    // Unlock audio on first interaction
-                                    if (!audioUnlocked && !soundEnabled && audioRef.current) {
-                                        audioRef.current.play().then(() => {
-                                            audioRef.current?.pause();
-                                            if (audioRef.current) audioRef.current.currentTime = 0;
-                                            setAudioUnlocked(true);
-                                        }).catch(console.error);
-                                    } else if (!soundEnabled) {
+                                    const newState = !soundEnabled;
+                                    setSoundEnabled(newState);
+                                    // Play a test beep when enabling sound (also unlocks audio)
+                                    if (newState) {
                                         playNotificationSound();
                                     }
                                 }}
@@ -509,7 +545,7 @@ export default function AdminOrdersPage() {
                                 {soundEnabled ? '🔔 Sound On' : '🔕 Sound Off'}
                             </button>
                             <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                (Auto-checks for new orders)
+                                {audioUnlocked ? '✅ Audio ready' : '⚠️ Tap here to enable sound'}
                             </span>
                         </div>
                     </div>
