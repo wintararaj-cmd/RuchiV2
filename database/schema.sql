@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- ============================================
 CREATE TABLE IF NOT EXISTS menu_items (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     category VARCHAR(100), -- Legacy field, kept for backward compatibility
@@ -285,7 +285,7 @@ INSERT INTO menu_items (name, description, category, price, gst_rate, available)
 ('Butter Naan', 'Soft leavened bread with butter', 'BREADS', 50.00, 5.00, true),
 ('Gulab Jamun', 'Sweet dumplings in sugar syrup', 'DESSERTS', 80.00, 5.00, true),
 ('Mango Lassi', 'Refreshing yogurt drink with mango', 'BEVERAGES', 100.00, 5.00, true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
 -- COMMENTS FOR DOCUMENTATION
