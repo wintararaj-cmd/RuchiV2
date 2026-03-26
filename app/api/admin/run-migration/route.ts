@@ -24,6 +24,25 @@ export async function POST(request: Request) {
                 EXCEPTION
                     WHEN duplicate_column THEN NULL;
                 END;
+
+                -- Orders Table Migrations
+                BEGIN
+                    ALTER TABLE orders ADD COLUMN customer_lat NUMERIC;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE orders ADD COLUMN customer_lng NUMERIC;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+
+                BEGIN
+                    ALTER TABLE orders ADD COLUMN distance NUMERIC;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
             END $$;
         `;
 

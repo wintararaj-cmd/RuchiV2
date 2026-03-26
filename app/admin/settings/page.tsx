@@ -261,6 +261,40 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
+                    <div className="glass-card" style={{ marginBottom: '1.5rem', border: '1px solid rgba(255, 145, 0, 0.3)' }}>
+                        <h2 style={{ marginBottom: '1rem', color: 'var(--warning)' }}>Database Maintenance</h2>
+                        <p className="text-muted" style={{ marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+                            If you encounter errors saying "column does not exist", use this button to update your database schema to the latest version.
+                        </p>
+
+                        <button
+                            onClick={async () => {
+                                if (confirm('Update database schema to the latest version?')) {
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch('/api/admin/run-migration', { method: 'POST' });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            alert('Database updated successfully!');
+                                        } else {
+                                            alert('Update failed: ' + (data.error || 'Unknown error'));
+                                        }
+                                    } catch (err) {
+                                        console.error(err);
+                                        alert('An error occurred during update.');
+                                    } finally {
+                                        setSaving(false);
+                                    }
+                                }
+                            }}
+                            disabled={saving}
+                            className="btn btn-warning"
+                            style={{ width: '100%' }}
+                        >
+                            {saving ? 'Updating...' : '🔄 Run Database Schema Update'}
+                        </button>
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                         <button onClick={handleReset} className="btn btn-ghost">
                             Reset to Default
