@@ -77,7 +77,7 @@ export default function CheckoutPage() {
 
     const getDeliveryCharge = () => {
         if (!selectedLocationId) return 0;
-        const location = deliveryLocations.find(loc => loc.id === selectedLocationId);
+        const location = deliveryLocations.find(loc => loc.id === selectedLocationId || Number(loc.id) === Number(selectedLocationId));
         return location ? parseFloat(location.delivery_charge.toString()) : 0;
     };
 
@@ -93,7 +93,7 @@ export default function CheckoutPage() {
             return;
         }
 
-        const location = deliveryLocations.find(loc => loc.id === selectedLocationId);
+        const location = deliveryLocations.find(loc => loc.id === selectedLocationId || Number(loc.id) === Number(selectedLocationId));
         if (location && location.min_order_value && subtotal < parseFloat(location.min_order_value.toString())) {
             alert(`Minimum order value for ${location.location_name} is ₹${parseFloat(location.min_order_value.toString()).toFixed(2)}. Your current subtotal is ₹${subtotal.toFixed(2)}.`);
             setLoading(false);
@@ -121,7 +121,7 @@ export default function CheckoutPage() {
                 subtotal,
                 tax,
                 discount: 0,
-                delivery_location_id: selectedLocationId,
+                delivery_location_id: selectedLocationId ? Number(selectedLocationId) : null,
                 delivery_charge: deliveryCharge,
                 total_amount: total,
                 payment_method: formData.paymentMethod,
@@ -159,85 +159,191 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            if (!isSilent) alert('GPS detection on iPhone/iOS requires an HTTPS secure connection. Please open this website using https:// or select your location manually.');
+            return;
+        }
+
         setDetectingLocation(true);
         setDetectedLocationInfo('');
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
+        // Helper to reliably get position across iPhone/iOS (where getCurrentPosition often stalls or fails if Precise Location is off)
+        const getMobileSafePosition = () => {
+            return new Promise<GeolocationPosition>((resolve, reject) => {
+                let resolved = false;
+                let watchId: number | null = null;
+                const isIOS = typeof window !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-                try {
-                    const response = await fetch('/api/delivery-locations/detect', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ latitude, longitude })
-                    });
+                const timer = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        if (watchId !== null) {
+                            try { navigator.geolocation.clearWatch(watchId); } catch (e) {}
+                        }
+                        reject({ code: 3, message: 'Timeout' } as GeolocationPositionError);
+                    }
+                }, isIOS ? 20000 : 15000);
 
-                    const data = await response.json();
+                const successCallback = (pos: GeolocationPosition) => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timer);
+                        if (watchId !== null) {
+                            try { navigator.geolocation.clearWatch(watchId); } catch (e) {}
+                        }
+                        resolve(pos);
+                    }
+                };
 
-                    if (data.success) {
-                        // Auto-select the detected location
-                        setSelectedLocationId(data.data.location.id);
-                        setDetectedLocationInfo(
-                            `✓ Detected: ${data.data.location.location_name} (${data.data.distance.toFixed(1)}km away)`
+                if (isIOS) {
+                    // On iOS Safari/Chrome, watchPosition immediately forces CoreLocation to emit cell/WiFi coordinate even if Precise Location is OFF or GPS is asleep
+                    try {
+                        watchId = navigator.geolocation.watchPosition(
+                            successCallback,
+                            (watchErr) => {
+                                // If watchPosition errors right away, try getCurrentPosition with low accuracy
+                                navigator.geolocation.getCurrentPosition(
+                                    successCallback,
+                                    (currErr) => {
+                                        if (!resolved) {
+                                            resolved = true;
+                                            clearTimeout(timer);
+                                            if (watchId !== null) {
+                                                try { navigator.geolocation.clearWatch(watchId); } catch (e) {}
+                                            }
+                                            reject(currErr || watchErr);
+                                        }
+                                    },
+                                    { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                                );
+                            },
+                            { enableHighAccuracy: false, timeout: 18000, maximumAge: 300000 }
                         );
+                    } catch (e) {
+                        navigator.geolocation.getCurrentPosition(
+                            successCallback,
+                            (err) => {
+                                if (!resolved) {
+                                    resolved = true;
+                                    clearTimeout(timer);
+                                    reject(err);
+                                }
+                            },
+                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                        );
+                    }
+                } else {
+                    // Non-iOS standard attempt
+                    navigator.geolocation.getCurrentPosition(
+                        successCallback,
+                        (highAccErr) => {
+                            navigator.geolocation.getCurrentPosition(
+                                successCallback,
+                                (lowAccErr) => {
+                                    if (!resolved) {
+                                        resolved = true;
+                                        clearTimeout(timer);
+                                        reject(lowAccErr);
+                                    }
+                                },
+                                { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                            );
+                        },
+                        { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+                    );
+                }
+            });
+        };
+
+        try {
+            const position = await getMobileSafePosition();
+            const { latitude, longitude } = position.coords;
+
+            const response = await fetch('/api/delivery-locations/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude, longitude })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.data?.location) {
+                const loc = data.data.location;
+                setDeliveryLocations(prev => {
+                    const exists = prev.some(l => Number(l.id) === Number(loc.id));
+                    return exists ? prev : [...prev, loc];
+                });
+                setSelectedLocationId(Number(loc.id));
+                setDetectedLocationInfo(
+                    `✓ Detected: ${loc.location_name} (${data.data.distance.toFixed(1)}km away)`
+                );
+                setCustomerCoords({
+                    lat: latitude,
+                    lng: longitude,
+                    distance: data.data.distance
+                });
+            } else if (data.data?.nearestLocation) {
+                const nearest = data.data.nearestLocation;
+                if (!isSilent) {
+                    const confirmUseNearest = confirm(
+                        `Your GPS distance is ${nearest.distance.toFixed(1)}km, which is outside our zone limit (${nearest.radius_km}km). Do you want to select nearest zone "${nearest.location_name}" anyway?`
+                    );
+                    if (confirmUseNearest) {
+                        setDeliveryLocations(prev => {
+                            const exists = prev.some(l => Number(l.id) === Number(nearest.id));
+                            return exists ? prev : [...prev, nearest];
+                        });
+                        setSelectedLocationId(Number(nearest.id));
                         setCustomerCoords({
                             lat: latitude,
                             lng: longitude,
-                            distance: data.data.distance
+                            distance: nearest.distance
                         });
-                    } else if (!isSilent) {
-                        // Show nearest location as suggestion only if not silent
                         setDetectedLocationInfo(
-                            `⚠️ ${data.error}. Please select manually.`
+                            `✓ Selected Nearest Zone: ${nearest.location_name} (${nearest.distance.toFixed(1)}km away)`
                         );
-                        if (data.data?.nearestLocation) {
-                            const confirmUseNearest = confirm(
-                                `You're outside delivery zones. Use nearest zone "${data.data.nearestLocation.location_name}" (${data.data.nearestLocation.distance.toFixed(1)}km away)?`
-                            );
-                            if (confirmUseNearest) {
-                                setSelectedLocationId(data.data.nearestLocation.id);
-                            }
-                        }
-                    } else if (data.data?.nearestLocation) {
-                        // If silent (auto-load), we can just set the recommendation info without alert
+                    } else {
                         setDetectedLocationInfo(
-                            `📍 You seem to be near ${data.data.nearestLocation.location_name} (${data.data.nearestLocation.distance.toFixed(1)}km).`
+                            `⚠️ Outside delivery zones (${nearest.distance.toFixed(1)}km away). Please select manually from the dropdown below.`
                         );
                     }
-                } catch (error) {
-                    console.error('Error detecting location:', error);
-                    if (!isSilent) alert('Failed to detect location. Please select manually.');
-                } finally {
-                    setDetectingLocation(false);
+                } else {
+                    // On silent auto-load, if outside exact range but within reasonable nearest limit, inform user clearly
+                    setDetectedLocationInfo(
+                        `📍 You seem to be near "${nearest.location_name}" (${nearest.distance.toFixed(1)}km away). Please select or verify your delivery zone below.`
+                    );
                 }
-            },
-            (error) => {
-                setDetectingLocation(false);
+            } else {
                 if (!isSilent) {
-                    let errorMessage = 'Could not get your location. ';
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage += 'Please allow location access and try again.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location information is unavailable.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage += 'Location request timed out.';
-                            break;
-                        default:
-                            errorMessage += 'An unknown error occurred.';
-                    }
-                    alert(errorMessage + ' Please select your location manually.');
+                    alert(data.error || 'Could not match delivery zone with your GPS coordinates. Please select manually.');
                 }
-            },
-            {
-                enableHighAccuracy: false,
-                timeout: 5000,
-                maximumAge: 60000
+                setDetectedLocationInfo(`⚠️ ${data.error || 'Could not match delivery zone.'}`);
             }
-        );
+        } catch (error: any) {
+            console.error('Error detecting location:', error);
+            if (!isSilent) {
+                const isIPhone = typeof window !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isInAppBrowser = typeof window !== 'undefined' && /FBAN|FBAV|Instagram|WhatsApp/i.test(navigator.userAgent);
+
+                let errorMessage = 'Could not detect your location. ';
+                if (error.code === 1 || error.code === 'PERMISSION_DENIED' || (error && error.PERMISSION_DENIED && error.code === error.PERMISSION_DENIED)) {
+                    errorMessage += isIPhone
+                        ? (isInAppBrowser
+                            ? 'Inside WhatsApp/Instagram on iPhone, tap 3 dots and choose "Open in Safari" to allow GPS access.'
+                            : 'On iPhone, even if allowed previously, please check:\n1) Tap "aA" icon in Safari address bar -> Website Settings -> Location -> Allow.\n2) Settings -> Privacy & Security -> Location Services -> Safari Websites (Set to "While Using" and turn ON "Precise Location").')
+                        : 'Please allow location access in your browser settings.';
+                } else if (error.code === 3 || error.code === 'TIMEOUT' || (error && error.TIMEOUT && error.code === error.TIMEOUT)) {
+                    errorMessage += isIPhone
+                        ? 'Location request timed out on your iPhone. Please check GPS/WiFi signal or select location manually.'
+                        : 'Location request timed out.';
+                } else {
+                    errorMessage += 'Location information is unavailable right now on your device.';
+                }
+                alert(errorMessage + '\n\nPlease select your delivery location manually from the dropdown below.');
+            }
+        } finally {
+            setDetectingLocation(false);
+        }
     };
 
     // Auto-detect location on page load
@@ -370,7 +476,7 @@ export default function CheckoutPage() {
                                     )}
 
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        💡 Tip: We detect your location automatically. Use the button to refresh if needed.
+                                        💡 Tip: We detect your location automatically. On iPhone/mobile, please ensure Location Services & Precise Location are enabled in your browser settings.
                                     </div>
                                 </div>
 
