@@ -1,5 +1,6 @@
 'use client';
 
+import { REVIEW_QR_DATA_URI } from '@/lib/review-qr';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -187,7 +188,7 @@ export default function InvoicePage() {
                 <div class="divider"></div>
                 <div class="text-center">${settings?.footerText || 'Thank You!'}</div>
                 <div class="text-center" style="margin-top: 10px;">
-                    <img src="/qr/ruchi_review_qr.svg" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
+                    <img src="${REVIEW_QR_DATA_URI}" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
                     <div style="font-size: 13px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Please scan and review us</div>
                 </div>
                 <br />
@@ -832,7 +833,7 @@ export default function InvoicePage() {
                             </p>
                             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <img 
-                                    src="/qr/ruchi_review_qr.svg" 
+                                    src={REVIEW_QR_DATA_URI} 
                                     alt="Scan to Review Us" 
                                     style={{ 
                                         width: settings?.printerType === 'thermal' ? '110px' : '130px', 
