@@ -104,7 +104,20 @@ export async function POST(request: Request) {
         }
 
         // START TRANSACTION
-        await client.query('BEGIN');
+                await client.query('BEGIN');
+
+        // Check restaurant GST setting to enforce tax rules
+        const gstSettingRes = await client.query("SELECT value FROM settings WHERE key = 'gst_type'");
+        const isRegularGst = gstSettingRes.rows.length > 0 ? gstSettingRes.rows[0].value === 'regular' : false;
+
+        // Enforce rule: If not regular (unregistered or composite), tax MUST be 0 and not charged
+        const finalTax = isRegularGst ? (parseFloat(tax?.toString() || '0') || 0) : 0;
+        const finalSubtotal = parseFloat(subtotal?.toString() || '0') || 0;
+        const finalDeliveryCharge = parseFloat(delivery_charge?.toString() || '0') || 0;
+        const finalDiscount = parseFloat(discount?.toString() || '0') || 0;
+        const finalTotal = isRegularGst 
+            ? (parseFloat(total_amount?.toString() || '0') || (finalSubtotal + finalTax + finalDeliveryCharge - finalDiscount))
+            : (finalSubtotal + finalDeliveryCharge - finalDiscount);
         
         // Generate daily sequential order number
         const today = new Date();
@@ -140,8 +153,8 @@ export async function POST(request: Request) {
            RETURNING *`,
                 [
                     orderNumber, user_id || null, customer_name || 'Walk-in Customer', customer_phone || 'N/A', customer_address || null,
-                    order_type || 'delivery', JSON.stringify(items), subtotal, tax || 0, discount || 0,
-                    delivery_location_id || null, delivery_charge || 0, total_amount, payment_method,
+                    order_type || 'delivery', JSON.stringify(items), finalSubtotal, finalTax, finalDiscount,
+                    delivery_location_id || null, finalDeliveryCharge, finalTotal, payment_method,
                     notes || null, table_number || null, order_status || 'pending', payment_status || 'pending',
                     customer_lat || null, customer_lng || null, distance || null,
                 ]
@@ -162,8 +175,8 @@ export async function POST(request: Request) {
                RETURNING *`,
                     [
                         orderNumber, user_id || null, customer_name || 'Walk-in Customer', customer_phone || 'N/A', customer_address || null,
-                        order_type || 'delivery', JSON.stringify(items), subtotal, tax || 0, discount || 0,
-                        delivery_location_id || null, delivery_charge || 0, total_amount, payment_method,
+                        order_type || 'delivery', JSON.stringify(items), finalSubtotal, finalTax, finalDiscount,
+                        delivery_location_id || null, finalDeliveryCharge, finalTotal, payment_method,
                         notes || null, table_number || null, order_status || 'pending', payment_status || 'pending',
                     ]
                 );
@@ -197,7 +210,7 @@ export async function POST(request: Request) {
         await client.query(
             `INSERT INTO invoices (order_id, invoice_number, subtotal, tax, discount, total)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-            [order.id, invoiceNumber, subtotal, tax || 0, discount || 0, total_amount]
+            [order.id, invoiceNumber, finalSubtotal, finalTax, finalDiscount, finalTotal]
         );
 
         // COMMIT TRANSACTION

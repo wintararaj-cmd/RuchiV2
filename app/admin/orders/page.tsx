@@ -343,7 +343,7 @@ export default function AdminOrdersPage() {
                 <div class="text-center header-large">${settings?.restaurantName || 'Ruchi Restaurant'}</div>
                 <div class="text-center" style="font-size: 16px;">${settings?.restaurantAddress || ''}</div>
                 <div class="text-center" style="font-size: 16px;">Ph: ${settings?.restaurantPhone || ''}</div>
-                ${settings?.gstNumber ? `<div class="text-center" style="font-size: 16px;">GST: ${settings.gstNumber}</div>` : ''}
+                ${(settings?.gstType === 'regular' && settings?.gstNumber) ? `<div class="text-center" style="font-size: 16px;">GST: ${settings.gstNumber}</div>` : ''}
                 <div class="divider"></div>
                 
                 <div class="text-center bold header-medium">${settings?.gstType === 'regular' ? 'TAX INVOICE' : 'BILL OF SUPPLY'}</div>
@@ -376,12 +376,16 @@ export default function AdminOrdersPage() {
                 <div class="divider"></div>
                 
                 <div class="text-right" style="font-size: 20px;">Subtotal: ${Number(order.subtotal || order.total_amount).toFixed(2)}</div>
-                ${Number(order.tax || 0) > 0 ? `<div class="text-right" style="font-size: 20px;">Tax: ${Number(order.tax).toFixed(2)}</div>` : ''}
+                ${(settings?.gstType === 'regular' && Number(order.tax || 0) > 0) ? `<div class="text-right" style="font-size: 20px;">Tax: ${Number(order.tax).toFixed(2)}</div>` : ''}
                 ${(Number(order.discount || 0) > 0 || Number(order.discount_amount || 0) > 0) ? `<div class="text-right" style="font-size: 20px;">Discount: -${Number(order.discount || order.discount_amount || 0).toFixed(2)}</div>` : ''}
                 <div class="text-right header-medium" style="margin-top: 5px;">TOTAL: ${Number(order.total_amount).toFixed(2)}</div>
                 
                 <div class="divider"></div>
                 <div class="text-center">${settings?.footerText || 'Thank you for visiting'}</div>
+                <div class="text-center" style="margin-top: 10px;">
+                    <img src="/qr/ruchi_review_qr.png" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
+                    <div style="font-size: 13px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Please scan and review us</div>
+                </div>
                 <br />
             </body>
             </html>
@@ -427,7 +431,7 @@ export default function AdminOrdersPage() {
 
             printer.textLine(settings?.restaurantAddress || '');
             printer.textLine(`Ph: ${settings?.restaurantPhone || ''}`);
-            if (settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
+            if (settings?.gstType === 'regular' && settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
             printer.feed(1);
 
             // Title and Meta
@@ -474,7 +478,7 @@ export default function AdminOrdersPage() {
             // Totals
             printer.alignRight();
             printer.textLine(`Subtotal: ${Number(order.subtotal || order.total_amount).toFixed(2)}`);
-            if (Number(order.tax || 0) > 0) printer.textLine(`Tax: ${Number(order.tax).toFixed(2)}`);
+            if (settings?.gstType === 'regular' && Number(order.tax || 0) > 0) printer.textLine(`Tax: ${Number(order.tax).toFixed(2)}`);
             if (Number(order.discount || 0) > 0 || Number(order.discount_amount || 0) > 0) printer.textLine(`Discount: -${Number(order.discount || order.discount_amount || 0).toFixed(2)}`);
 
             printer.setSize(2, 3); // Extra large Total
@@ -485,6 +489,8 @@ export default function AdminOrdersPage() {
             // Footer
             printer.alignCenter();
             printer.textLine(settings?.footerText || 'Thank You!');
+            printer.feed(1);
+            printer.bold(true).textLine('Please scan and review us').bold(false);
             printer.feed(3);
             printer.cut();
 

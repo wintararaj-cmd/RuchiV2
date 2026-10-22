@@ -171,7 +171,7 @@ export default function SalesmanDashboard() {
     };
 
     const calculateTax = () => {
-        if (settings && (settings.gstType === 'unregistered' || settings.gstType === 'composite')) {
+        if (!settings || settings.gstType !== 'regular') {
             return 0;
         }
         return cart.reduce((sum, item) => {

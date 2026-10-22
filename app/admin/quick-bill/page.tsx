@@ -120,7 +120,7 @@ export default function QuickBillPage() {
     };
 
     const calculateTax = () => {
-        if (!settings || settings.gstType === 'unregistered' || settings.gstType === 'composite') {
+        if (!settings || settings.gstType !== 'regular') {
             return 0;
         }
         return cart.reduce((sum, item) => {
@@ -180,7 +180,7 @@ export default function QuickBillPage() {
                 <div class="text-center header-large">${settings?.restaurantName || 'Ruchi Restaurant'}</div>
                 <div class="text-center" style="font-size: 14px;">${settings?.restaurantAddress || ''}</div>
                 <div class="text-center" style="font-size: 14px;">Ph: ${settings?.restaurantPhone || ''}</div>
-                ${settings?.gstNumber ? `<div class="text-center" style="font-size: 14px;">GST: ${settings.gstNumber}</div>` : ''}
+                ${(settings?.gstType === 'regular' && settings?.gstNumber) ? `<div class="text-center" style="font-size: 14px;">GST: ${settings.gstNumber}</div>` : ''}
                 
                 <div class="divider"></div>
                 
@@ -218,6 +218,10 @@ export default function QuickBillPage() {
                 
                 <div class="divider"></div>
                 <div class="text-center">${settings?.footerText || 'Thank You!'}</div>
+                <div class="text-center" style="margin-top: 10px;">
+                    <img src="/qr/ruchi_review_qr.png" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
+                    <div style="font-size: 13px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Please scan and review us</div>
+                </div>
                 <br />
             </body>
             </html>
@@ -263,7 +267,7 @@ export default function QuickBillPage() {
 
             printer.textLine(settings?.restaurantAddress || '');
             printer.textLine(`Ph: ${settings?.restaurantPhone || ''}`);
-            if (settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
+            if (settings?.gstType === 'regular' && settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
             printer.feed(1);
 
             // Title and Meta
@@ -316,6 +320,8 @@ export default function QuickBillPage() {
             // Footer
             printer.alignCenter();
             printer.textLine(settings?.footerText || 'Thank You!');
+            printer.feed(1);
+            printer.bold(true).textLine('Please scan and review us').bold(false);
             printer.feed(3);
             printer.cut();
 

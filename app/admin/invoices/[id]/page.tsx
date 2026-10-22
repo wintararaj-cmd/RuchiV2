@@ -146,7 +146,7 @@ export default function InvoicePage() {
                 <div class="text-center bold" style="font-size: 20px;">${settings?.restaurantName || 'Ruchi Restaurant'}</div>
                 <div class="text-center" style="font-size: 14px;">${settings?.restaurantAddress || ''}</div>
                 <div class="text-center" style="font-size: 14px;">Ph: ${settings?.restaurantPhone || ''}</div>
-                ${settings?.gstNumber ? `<div class="text-center" style="font-size: 14px;">GST: ${settings.gstNumber}</div>` : ''}
+                ${(settings?.gstType === 'regular' && settings?.gstNumber) ? `<div class="text-center" style="font-size: 14px;">GST: ${settings.gstNumber}</div>` : ''}
                 
                 <div class="divider"></div>
                 
@@ -186,6 +186,10 @@ export default function InvoicePage() {
                 
                 <div class="divider"></div>
                 <div class="text-center">${settings?.footerText || 'Thank You!'}</div>
+                <div class="text-center" style="margin-top: 10px;">
+                    <img src="/qr/ruchi_review_qr.png" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
+                    <div style="font-size: 13px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Please scan and review us</div>
+                </div>
                 <br />
             </body>
             </html>
@@ -369,7 +373,7 @@ export default function InvoicePage() {
 
             printer.textLine(settings?.restaurantAddress || '');
             printer.textLine(`Ph: ${settings?.restaurantPhone || ''}`);
-            if (settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
+            if (settings?.gstType === 'regular' && settings?.gstNumber) printer.textLine(`GST: ${settings.gstNumber}`);
             printer.feed(1);
 
             // Title and Meta
@@ -428,6 +432,8 @@ export default function InvoicePage() {
             // Footer
             printer.alignCenter();
             printer.textLine(settings?.footerText || 'Thank You!');
+            printer.feed(1);
+            printer.bold(true).textLine('Please scan and review us').bold(false);
             printer.feed(3);
             printer.cut();
 
@@ -678,7 +684,7 @@ export default function InvoicePage() {
                                 <>
                                     <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>{settings?.restaurantAddress}</p>
                                     <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>Ph: {settings?.restaurantPhone}</p>
-                                    {settings?.gstNumber && <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>GST: {settings?.gstNumber}</p>}
+                                    {(settings?.gstType === 'regular' && settings?.gstNumber) && <p style={{ fontSize: '0.75rem', margin: '0.25rem 0' }}>GST: {settings?.gstNumber}</p>}
                                 </>
                             )}
                             <p style={{ fontSize: settings?.printerType === 'thermal' ? '0.875rem' : '1.25rem', fontWeight: 600, marginTop: '0.5rem' }}>
@@ -697,7 +703,7 @@ export default function InvoicePage() {
                                             {settings?.restaurantAddress || '123 Main Street, City, State 12345'}<br />
                                             Phone: {settings?.restaurantPhone || '+91 1234567890'}<br />
                                             Email: {settings?.restaurantEmail || 'info@ruchi.com'}
-                                            {settings?.gstNumber && <><br />GST: {settings.gstNumber}</>}
+                                            {(settings?.gstType === 'regular' && settings?.gstNumber) && <><br />GST: {settings.gstNumber}</>}
                                         </p>
                                     </div>
                                     <div>
@@ -824,6 +830,28 @@ export default function InvoicePage() {
                             <p style={{ fontSize: settings?.printerType === 'thermal' ? '0.75rem' : '0.875rem', margin: '0.25rem 0' }}>
                                 {settings?.footerText || 'Thank you for your business!'}
                             </p>
+                            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <img 
+                                    src="/qr/ruchi_review_qr.png" 
+                                    alt="Scan to Review Us" 
+                                    style={{ 
+                                        width: settings?.printerType === 'thermal' ? '110px' : '130px', 
+                                        height: settings?.printerType === 'thermal' ? '110px' : '130px', 
+                                        objectFit: 'contain',
+                                        margin: '0 auto',
+                                        display: 'block'
+                                    }} 
+                                />
+                                <p style={{ 
+                                    fontSize: settings?.printerType === 'thermal' ? '0.75rem' : '0.875rem', 
+                                    fontWeight: 800, 
+                                    margin: '0.35rem 0 0 0',
+                                    letterSpacing: '0.3px',
+                                    textTransform: 'uppercase'
+                                }}>
+                                    Please scan and review us
+                                </p>
+                            </div>
                             {settings?.printerType !== 'thermal' && (
                                 <p className="text-muted" style={{ fontSize: '0.8125rem', marginTop: '0.5rem' }}>
                                     This is a computer-generated invoice and does not require a signature.
