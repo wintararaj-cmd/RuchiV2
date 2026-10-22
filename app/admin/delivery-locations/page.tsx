@@ -252,9 +252,9 @@ export default function DeliveryLocationsPage() {
                                                     '⚠️ Missing GPS Coordinates (Auto-detection disabled)'
                                                 )}
                                             </div>
-                                            {location.min_order_value > 0 && (
+                                            {(location.min_order_value ?? 0) > 0 && (
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 600, marginTop: '0.25rem' }}>
-                                                    🛒 Min Order: ₹{parseFloat(location.min_order_value.toString()).toFixed(2)}
+                                                    🛒 Min Order: ₹{parseFloat((location.min_order_value || 0).toString()).toFixed(2)}
                                                 </div>
                                             )}
                                         </td>

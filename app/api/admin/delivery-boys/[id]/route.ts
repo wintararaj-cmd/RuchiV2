@@ -37,7 +37,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         // Check email uniqueness if changed
         if (email) {
             const emailCheck = await query("SELECT id FROM users WHERE email = $1 AND id != $2", [email, id]);
-            if (emailCheck.rowCount > 0) {
+            if ((emailCheck.rowCount ?? 0) > 0) {
                 return NextResponse.json({ success: false, error: 'Email already exists' }, { status: 409 });
             }
         }

@@ -9,7 +9,7 @@ const pool = new Pool({
     password: process.env.DB_PASSWORD || '',
 });
 
-async function query(text, params) {
+async function query(text: string, params?: any[]) {
     return pool.query(text, params);
 }
 

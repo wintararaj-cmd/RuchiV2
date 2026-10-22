@@ -30,7 +30,7 @@ export default function MenuPage() {
         }
     };
 
-    const categories = ['all', ...Array.from(new Set(menuItems.map(item => item.category_name).filter(Boolean)))];
+    const categories: string[] = ['all', ...Array.from(new Set(menuItems.map(item => item.category_name).filter((c): c is string => Boolean(c))))];
 
     const filteredItems = menuItems.filter(item => {
         const matchesCategory = selectedCategory === 'all' || item.category_name === selectedCategory;
@@ -122,6 +122,8 @@ export default function MenuPage() {
                                     <img
                                         src={item.image_url}
                                         alt={item.name}
+                                        loading="lazy"
+                                        decoding="async"
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />
                                 ) : (

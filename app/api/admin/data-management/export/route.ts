@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         }
 
         let queryText = '';
+        let queryParams: any[] = [];
         let data: any[] = [];
         let headers: string[] = [];
 
@@ -125,7 +126,8 @@ export async function GET(request: NextRequest) {
                 `;
 
                 if (startDate && endDate) {
-                    orderQuery += ` WHERE o.created_at >= '${startDate}' AND o.created_at <= '${endDate} 23:59:59'`;
+                    queryParams = [startDate, `${endDate} 23:59:59`];
+                    orderQuery += ' WHERE o.created_at >= $1 AND o.created_at <= $2';
                 }
 
                 orderQuery += ' ORDER BY o.created_at DESC';
@@ -142,7 +144,7 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Invalid data type' }, { status: 400 });
         }
 
-        const result = await query(queryText);
+        const result = await query(queryText, queryParams);
         data = result.rows;
 
         if (format === 'csv') {

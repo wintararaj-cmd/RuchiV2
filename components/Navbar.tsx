@@ -45,7 +45,7 @@ export default function Navbar() {
                         Menu
                     </Link>
 
-                    {isAuthenticated && !isAdmin && (
+                    {isAuthenticated && user?.role === 'customer' && (
                         <Link
                             href="/orders"
                             className={`navbar-link ${isActive('/orders') ? 'active' : ''}`}

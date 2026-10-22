@@ -110,16 +110,23 @@ export async function POST(request: Request) {
         const today = new Date();
         const datePrefix = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
 
-        // Optimized count query using date range instead of DATE() function for better index usage
-        const orderCountResult = await client.query(
-            `SELECT COUNT(*) as count FROM orders 
-             WHERE created_at >= CURRENT_DATE 
-             AND created_at < (CURRENT_DATE + INTERVAL '1 day')
-             AND order_number LIKE $1`,
+        // Resilient sequence query to prevent collisions and race conditions
+        const lastOrderResult = await client.query(
+            `SELECT order_number FROM orders 
+             WHERE order_number LIKE $1 
+             ORDER BY order_number DESC 
+             LIMIT 1`,
             [`${datePrefix}-%`]
         );
-        const orderCount = parseInt(orderCountResult.rows[0].count) + 1;
-        const orderNumber = `${datePrefix}-${String(orderCount).padStart(3, '0')}`; // Format: YYYYMMDD-XXX
+        let nextSeq = 1;
+        if (lastOrderResult.rows.length > 0 && lastOrderResult.rows[0].order_number) {
+            const parts = lastOrderResult.rows[0].order_number.split('-');
+            const lastNum = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lastNum)) {
+                nextSeq = lastNum + 1;
+            }
+        }
+        const orderNumber = `${datePrefix}-${String(nextSeq).padStart(3, '0')}`; // Format: YYYYMMDD-XXX
 
         let orderResult;
         try {
@@ -169,16 +176,23 @@ export async function POST(request: Request) {
         const order = orderResult.rows[0];
         const invoiceDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
 
-        // Optimized invoice count query
-        const invoiceCountResult = await client.query(
-            `SELECT COUNT(*) as count FROM invoices 
-             WHERE generated_at >= CURRENT_DATE 
-             AND generated_at < (CURRENT_DATE + INTERVAL '1 day')
-             AND invoice_number LIKE $1`,
+        // Resilient invoice sequence calculation
+        const lastInvResult = await client.query(
+            `SELECT invoice_number FROM invoices 
+             WHERE invoice_number LIKE $1 
+             ORDER BY invoice_number DESC 
+             LIMIT 1`,
             [`INV-${invoiceDate}-%`]
         );
-        const invoiceCount = parseInt(invoiceCountResult.rows[0].count) + 1;
-        const invoiceNumber = `INV-${invoiceDate}-${String(invoiceCount).padStart(4, '0')}`;
+        let nextInvSeq = 1;
+        if (lastInvResult.rows.length > 0 && lastInvResult.rows[0].invoice_number) {
+            const parts = lastInvResult.rows[0].invoice_number.split('-');
+            const lastNum = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lastNum)) {
+                nextInvSeq = lastNum + 1;
+            }
+        }
+        const invoiceNumber = `INV-${invoiceDate}-${String(nextInvSeq).padStart(4, '0')}`;
 
         await client.query(
             `INSERT INTO invoices (order_id, invoice_number, subtotal, tax, discount, total)

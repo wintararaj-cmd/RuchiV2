@@ -37,8 +37,9 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-    console.error('❌ Unexpected error on idle client', err);
-    process.exit(-1);
+    // Log unexpected errors on idle clients, but DO NOT terminate the server process.
+    // The pg pool will automatically discard dead clients and spawn new ones on demand.
+    console.error('⚠️ Unexpected error on idle database client:', err.message || err);
 });
 
 // Helper function to execute queries

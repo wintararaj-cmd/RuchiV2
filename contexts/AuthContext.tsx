@@ -103,15 +103,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 router.push('/login');
             }
         } else if (user) {
-            // Logged in
-            if (isAdminRoute && user.role !== 'admin') {
-                router.push('/');
-            }
-            if (isSalesmanRoute && user.role !== 'salesman' && user.role !== 'admin') {
-                router.push('/');
-            }
-            if (isDeliveryRoute && user.role !== 'delivery_boy' && user.role !== 'admin') {
-                router.push('/');
+            // Logged in role enforcement
+            if (user.role === 'salesman') {
+                // Salesman must ONLY take orders, strictly no reports or admin/orders/delivery access
+                if (isAdminRoute || pathname === '/orders' || isDeliveryRoute) {
+                    router.replace('/salesman');
+                    return;
+                }
+            } else if (user.role === 'delivery_boy') {
+                if (isAdminRoute || pathname === '/orders' || isSalesmanRoute) {
+                    router.replace('/delivery');
+                    return;
+                }
+            } else if (user.role === 'customer') {
+                if (isAdminRoute || isSalesmanRoute || isDeliveryRoute) {
+                    router.replace('/menu');
+                    return;
+                }
+            } else if (user.role === 'admin') {
+                if (isSalesmanRoute) {
+                    // Admin can view salesman if needed
+                }
             }
         }
     }, [user, loading, pathname, router]);

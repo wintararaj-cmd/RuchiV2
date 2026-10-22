@@ -70,8 +70,34 @@ export default function AdminMenuPage() {
         if (file) {
             setImageFile(file);
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
+            reader.onload = (event) => {
+                const img = new (window as any).Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 800; // Optimal max dimension for menu items
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.82);
+                        setImagePreview(optimizedBase64);
+                    } else {
+                        setImagePreview(reader.result as string);
+                    }
+                };
+                img.src = event.target?.result as string;
             };
             reader.readAsDataURL(file);
         }

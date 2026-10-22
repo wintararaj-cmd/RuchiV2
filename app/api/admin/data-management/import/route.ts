@@ -10,7 +10,7 @@ function parseCSV(csvText: string): any[] {
     const data: any[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-        const values = [];
+        const values: string[] = [];
         let currentValue = '';
         let insideQuotes = false;
 
