@@ -1,6 +1,5 @@
 'use client';
 
-import { REVIEW_QR_DATA_URI } from '@/lib/review-qr';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -187,10 +186,6 @@ export default function InvoicePage() {
                 
                 <div class="divider"></div>
                 <div class="text-center">${settings?.footerText || 'Thank You!'}</div>
-                <div class="text-center" style="margin-top: 10px;">
-                    <img src="${REVIEW_QR_DATA_URI}" alt="Review QR" style="width: 120px; height: 120px; margin: 0 auto; display: block; object-fit: contain;" />
-                    <div style="font-size: 13px; font-weight: 900; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Please scan and review us</div>
-                </div>
                 <br />
             </body>
             </html>
@@ -433,8 +428,6 @@ export default function InvoicePage() {
             // Footer
             printer.alignCenter();
             printer.textLine(settings?.footerText || 'Thank You!');
-            printer.feed(1);
-            printer.bold(true).textLine('Please scan and review us').bold(false);
             printer.feed(3);
             printer.cut();
 
@@ -831,28 +824,6 @@ export default function InvoicePage() {
                             <p style={{ fontSize: settings?.printerType === 'thermal' ? '0.75rem' : '0.875rem', margin: '0.25rem 0' }}>
                                 {settings?.footerText || 'Thank you for your business!'}
                             </p>
-                            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                <img 
-                                    src={REVIEW_QR_DATA_URI} 
-                                    alt="Scan to Review Us" 
-                                    style={{ 
-                                        width: settings?.printerType === 'thermal' ? '110px' : '130px', 
-                                        height: settings?.printerType === 'thermal' ? '110px' : '130px', 
-                                        objectFit: 'contain',
-                                        margin: '0 auto',
-                                        display: 'block'
-                                    }} 
-                                />
-                                <p style={{ 
-                                    fontSize: settings?.printerType === 'thermal' ? '0.75rem' : '0.875rem', 
-                                    fontWeight: 800, 
-                                    margin: '0.35rem 0 0 0',
-                                    letterSpacing: '0.3px',
-                                    textTransform: 'uppercase'
-                                }}>
-                                    Please scan and review us
-                                </p>
-                            </div>
                             {settings?.printerType !== 'thermal' && (
                                 <p className="text-muted" style={{ fontSize: '0.8125rem', marginTop: '0.5rem' }}>
                                     This is a computer-generated invoice and does not require a signature.
