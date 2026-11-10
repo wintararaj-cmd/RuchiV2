@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getBusinessDateRange } from '@/lib/date-utils';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
 interface SaleEntry {
@@ -88,33 +89,7 @@ export default function SaleBookPage() {
     };
 
     const getDateRange = () => {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        const endOfDay = new Date(today);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        switch (dateFilter) {
-            case 'today':
-                return { start: today, end: endOfDay };
-            case 'week':
-                const weekStart = new Date(today);
-                weekStart.setDate(today.getDate() - 7);
-                return { start: weekStart, end: endOfDay };
-            case 'month':
-                const monthStart = new Date(today);
-                monthStart.setMonth(today.getMonth() - 1);
-                return { start: monthStart, end: endOfDay };
-            case 'custom':
-                const customEnd = customEndDate ? new Date(customEndDate) : new Date();
-                if (customEndDate) customEnd.setHours(23, 59, 59, 999);
-                return {
-                    start: customStartDate ? new Date(customStartDate) : new Date(0),
-                    end: customEnd,
-                };
-            default:
-                return { start: new Date(0), end: endOfDay }; // All time, end is effectively open but practically now/future
-        }
+        return getBusinessDateRange(dateFilter, customStartDate, customEndDate);
     };
 
     const getOrderSource = (sale: SaleEntry) => {
@@ -229,6 +204,7 @@ export default function SaleBookPage() {
                             <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="input">
                                 <option value="all">All Time</option>
                                 <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
                                 <option value="week">Last 7 Days</option>
                                 <option value="month">Last 30 Days</option>
                                 <option value="custom">Custom Range</option>

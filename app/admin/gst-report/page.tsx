@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getBusinessDateRange } from '@/lib/date-utils';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
 interface GSTReportData {
@@ -62,31 +63,12 @@ export default function GSTReportPage() {
                 return;
             }
 
-            // Filter orders by date
-            let filteredOrders = ordersData.data;
-            const now = new Date();
-
-            if (dateFilter === 'today') {
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                filteredOrders = filteredOrders.filter((o: any) =>
-                    new Date(o.created_at) >= today
-                );
-            } else if (dateFilter === 'week') {
-                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                filteredOrders = filteredOrders.filter((o: any) =>
-                    new Date(o.created_at) >= weekAgo
-                );
-            } else if (dateFilter === 'month') {
-                const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-                filteredOrders = filteredOrders.filter((o: any) =>
-                    new Date(o.created_at) >= monthAgo
-                );
-            } else if (dateFilter === 'custom' && startDate && endDate) {
-                filteredOrders = filteredOrders.filter((o: any) => {
-                    const orderDate = new Date(o.created_at);
-                    return orderDate >= new Date(startDate) && orderDate <= new Date(endDate + 'T23:59:59');
-                });
-            }
+            // Filter orders by business day date range
+            const { start, end } = getBusinessDateRange(dateFilter, startDate, endDate);
+            const filteredOrders = ordersData.data.filter((o: any) => {
+                const orderDate = new Date(o.created_at);
+                return orderDate >= start && orderDate <= end;
+            });
 
             // Calculate GST breakdown by rate
             const gstBreakdown = new Map<number, { sales: number; gst: number; count: number }>();
@@ -263,6 +245,12 @@ export default function GSTReportPage() {
                             className={dateFilter === 'today' ? 'btn btn-primary' : 'btn btn-ghost'}
                         >
                             Today
+                        </button>
+                        <button
+                            onClick={() => setDateFilter('yesterday')}
+                            className={dateFilter === 'yesterday' ? 'btn btn-primary' : 'btn btn-ghost'}
+                        >
+                            Yesterday
                         </button>
                         <button
                             onClick={() => setDateFilter('week')}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getBusinessDateString } from '@/lib/date-utils';
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -114,7 +115,7 @@ export default function AnalyticsPage() {
             // Revenue by day
             const revenueByDayMap = new Map<string, { revenue: number; orders: number }>();
             filteredOrders.forEach((order: any) => {
-                const date = new Date(order.created_at).toISOString().split('T')[0];
+                const date = getBusinessDateString(order.created_at);
                 const revenue = parseFloat(order.total_amount);
 
                 if (revenueByDayMap.has(date)) {

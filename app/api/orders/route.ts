@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query, getClient } from '@/lib/db';
+import { getBusinessOrderPrefix } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,8 +121,8 @@ export async function POST(request: Request) {
             : (finalSubtotal + finalDeliveryCharge - finalDiscount);
         
         // Generate daily sequential order number
-        const today = new Date();
-        const datePrefix = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
+        // Generate daily sequential order number based on restaurant business day (4:00 AM cut-off IST)
+        const datePrefix = getBusinessOrderPrefix(); // Format: YYYYMMDD
 
         // Resilient sequence query to prevent collisions and race conditions
         const lastOrderResult = await client.query(

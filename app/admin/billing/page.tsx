@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { isTodayBusinessDay } from '@/lib/date-utils';
 import { formatDate } from '@/lib/utils';
 
 export default function AdminBillingPage() {
@@ -39,13 +40,12 @@ export default function AdminBillingPage() {
                 const orders = ordersData.data;
                 setOrders(orders);
 
-                const today = new Date().toDateString();
                 setStats({
                     totalRevenue: orders.reduce((sum: number, o: any) => sum + parseFloat(o.total_amount), 0),
                     paidOrders: orders.filter((o: any) => o.payment_status === 'paid').length,
                     pendingPayments: orders.filter((o: any) => o.payment_status === 'pending').length,
                     todayRevenue: orders
-                        .filter((o: any) => new Date(o.created_at).toDateString() === today)
+                        .filter((o: any) => isTodayBusinessDay(o.created_at))
                         .reduce((sum: number, o: any) => sum + parseFloat(o.total_amount), 0),
                 });
             }

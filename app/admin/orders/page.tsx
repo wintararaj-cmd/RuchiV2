@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { isTodayBusinessDay, isYesterdayBusinessDay } from '@/lib/date-utils';
 
 import { ReceiptPrinter } from '@/lib/receipt-printer';
 import { formatDate, formatDateTime } from '@/lib/utils';
@@ -507,9 +508,9 @@ export default function AdminOrdersPage() {
 
         let matchesDate = true;
         if (dateFilter === 'today') {
-            const today = new Date().toDateString();
-            const orderDate = new Date(o.created_at).toDateString();
-            matchesDate = orderDate === today;
+            matchesDate = isTodayBusinessDay(o.created_at);
+        } else if (dateFilter === 'yesterday') {
+            matchesDate = isYesterdayBusinessDay(o.created_at);
         }
 
         return matchesStatus && matchesDate;
@@ -571,6 +572,13 @@ export default function AdminOrdersPage() {
                             style={{ padding: '0.625rem 1.25rem' }}
                         >
                             Today
+                        </button>
+                        <button
+                            onClick={() => setDateFilter('yesterday')}
+                            className={dateFilter === 'yesterday' ? 'btn btn-primary' : 'btn btn-ghost'}
+                            style={{ padding: '0.625rem 1.25rem' }}
+                        >
+                            Yesterday
                         </button>
                         <button
                             onClick={() => setDateFilter('all')}
